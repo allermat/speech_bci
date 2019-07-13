@@ -23,6 +23,18 @@ else % cancel is pressed
     return;
 end
 
+%% Loading setup specific information
+setupID = getenv('computername');
+
+temp = load('setup_spec.mat');
+setupIDlist = {temp.setup_spec.ID};
+idx = find(strcmp(setupID,setupIDlist));
+if ~isempty(idx)
+    setupSpec = temp.setup_spec(idx);
+else
+    error('Could not find setup specific information! ');
+end
+
 %% Parameters
 % Synchrony measurement mode
 syncMode = false;
@@ -64,8 +76,9 @@ filePath = fullfile(BCI_setupdir('data_behav_sub',subjectId),'stim.mat');
 
 if ~syncMode
     if devMode || practiceMode
-        [stim,stimKey,targetWords,nTargets] = BCI_generateAllStimuli(subjectId,nRuns, ...
-                                                            nTrialsPerRun);
+        [stim,stimKey,targetWords,nTargets] = ...
+            BCI_generateAllStimuli(subjectId,'nRuns',nRuns,'nTrialsPerRun', ...
+                                   nTrialsPerRun,'saveFile',false);
     else
         load(filePath,'stim','stimKey','targetWords','nTargets');
     end
@@ -78,12 +91,10 @@ else
     nTargets = 12;
 end
 
-%% Prepare data file
-data = {'Subject','Run','Trial','Sound onset(s)','Sound offset (s)', ...
-        'Target word','Response','Correct Response'};
 
-%% Make behavioral performance variables
-responses = NaN(nTrialsPerRun,1);
+
+%% Setting up variables
+[tStartSound,tEndSound,responses] = deal(NaN(nTrialsPerRun,1));
 correctResponses = nTargets(iRun,:);
 abort = false; % flag for aborting the run
 
@@ -122,7 +133,7 @@ try
         % Select sound for current trial and extract stim info from sound filename
         targetWordCurrent = targetWords{iRun,iTrial};
         audioCurrent = repmat(stim{iRun,iTrial},2,1);
-        triggerCurrent = stimKey{iRun,iTrial};
+        stimTriggerCurrent = stimKey{iRun,iTrial};
         
         
         % Display target word
@@ -148,8 +159,8 @@ try
         % MEG.ResetClock; % is this necessary?
         % Sending triggers in to indicate individual word onsets within the
         % continuous audio stimulus
-        for iStim = 1:numel(triggerCurrent)
-            MEG.SendTrigger(triggerCurrent(iStim));
+        for iStim = 1:numel(stimTriggerCurrent)
+            MEG.SendTrigger(stimTriggerCurrent(iStim));
             WaitSecs(0.01);
             MEG.SendTrigger(0);
             
@@ -181,10 +192,6 @@ try
                 % Reset screen
                 Screen('FillRect',window,grey,windowRect);
                 Screen('Flip', window);
-                % Send response trigger
-                MEG.SendTrigger(10+respCurrent);
-                WaitSecs(0.01);
-                MEG.SendTrigger(0)
                 % Log response (we don't care about multiple presses here) the
                 % responded repetition numbers are 10 for button 3, 11 for 4 and 12
                 % for 5, so I just add 7 the the buttonPressed variable to get
@@ -195,6 +202,10 @@ try
                     case 'RB', respCurrent = 12;
                     otherwise, respCurrent = 0;
                 end
+                % Send response trigger
+                MEG.SendTrigger(10+respCurrent);
+                WaitSecs(0.01);
+                MEG.SendTrigger(0)
             else
                 respCurrent = NaN;
             end
@@ -206,10 +217,6 @@ try
             MEG.SendTrigger(11);
             WaitSecs(0.01);
             MEG.SendTrigger(0);
-            % Collect data
-            data(1+iTrial,:) = [{subjectId},{iRun},{iTrial},{tStartSoundCurrent},...
-                {tEndSoundCurrent},{targetWordCurrent},{respCurrent}, ...
-                {correctResponses(iTrial)}];
             
             % Display progress to experimenter
             fprintf('\nRun %d, trial %d...\n',iRun,iTrial);
@@ -218,7 +225,18 @@ try
             fprintf('\nRun %d, trial %d...Aborted!\n',iRun,iTrial);
             break;
         end
-    end
+        tStartSound(iTrial) = tStartSoundCurrent;
+        tEndSound(iTrial) = tEndSoundCurrent;
+        
+    end % End trial loop
+    
+    %% Collect data
+    dataVarNames = {'Subject','Run','Trial','Sound_onset','Sound_offset', ...
+                    'Target_word','Response','Correct_response'};
+    data = table(repmat(subjectId,nTrialsPerRun,1),repmat(iRun,nTrialsPerRun,1),...
+                 (1:nTrialsPerRun)',tStartSound,tEndSound,... 
+                 targetWords(iRun,:),responses,correctResponses,...
+                 'VariableNames',dataVarNames);
     
     %% Compute performance
     score = ((responses == correctResponses)/numel(correctResponses))*100;
@@ -234,11 +252,6 @@ try
     %% Show experimenter some peformance feedback
     fprintf('\nTrials completed = %d\n',trial);
     fprintf('\nScore = %d%\n',score);
-    % fprintf('\nHit rate = %d%\n',hitRate);
-    % fprintf('\nFalse alarm rate = %d%\n',falseAlarmRate);
-    % fprintf('\nRT = %d ms\n',round(mean(RT(find(hits)))*1000));
-    
-    %end
     
     %% Note when script finished
     tExpDur = toc(tExpStart)/60;

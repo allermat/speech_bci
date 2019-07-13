@@ -3,7 +3,8 @@ function [stim,stimKey] = BCI_generateStimulus(S)
 p = inputParser;
 
 fieldsReqS = {'audioLoaded','isSelectedWord','nCh','nNoiseStimuli', ...
-              'nRepetitionPerWord','nWordsSelected','nRepetitionMinimum'};
+              'nRepetitionPerWord','nTargets','nWordsSelected',...
+              'targetKey','nRepetitionMinimum'};
 
 checkS = @(x) all(isfield(x,fieldsReqS));
 
@@ -60,7 +61,13 @@ stimKey_2 = cat(1,stimKey_2,...
 randVector = randperm(size(stim_2,1));
 stim_2 = stim_2(randVector);
 stimKey_2 = stimKey_2(randVector);
-
+% Removing instances of target word if necessary
+if S.nTargets < S.nRepetitionPerWord
+    nToRemove = S.nRepetitionPerWord-S.nTargets;
+    idx = find(ismember(stimKey_2,S.targetKey));
+    stim_2(idx(1:nToRemove)) = [];
+    stimKey_2(idx(1:nToRemove)) = [];
+end
 stim = cat(2,stim_1{:},stim_2{:});
 % Normalize stimulus between +/-1
 stim = stim./max(abs(stim));

@@ -46,8 +46,11 @@ Screen('TextFont', window, 'Courier');
 %% For sound
 
 % Initialize Sounddriver
-InitializePsychSound(1);
-
+if devMode
+    InitializePsychSound(0);
+else
+    InitializePsychSound(1);
+end
 % Should we wait for the device to really start (1 = yes)
 % INFO: See help PsychPortAudio
 waitForDeviceStart = 1;
@@ -58,7 +61,7 @@ waitForDeviceStart = 1;
 % (3) 1 = default level of latency
 % (4) Requested frequency in samples per second
 % (5) 2 = stereo putput
-pahandle = PsychPortAudio('Open', [], 1, 1, fs, nrchannels);
+pahandle = PsychPortAudio('Open', setupSpec.audioDeviceID, 1, 1, fs, nrchannels);
 
 % Generate some beep sound 1000 Hz, 0.1 secs, 50% amplitude and fill it
 % in the buffer for preheting playback.

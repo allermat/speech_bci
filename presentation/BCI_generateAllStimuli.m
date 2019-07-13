@@ -1,19 +1,21 @@
-function [stim,stimKey,targetWords,nTargets] = BCI_generateAllStimuli(subjectId,varargin)
+function [stimAll,stimKeyAll,targetWordsAll,nTargetsAll] = BCI_generateAllStimuli(subjectId,varargin)
 
 p = inputParser;
 
 addRequired(p,'subjectId',@(x) validateattributes(x,{'numeric'}, ...
             {'scalar','integer','nonnegative'}));
-addOptional(p,'nRuns',6,@(x) validateattributes(x,{'numeric'}, ...
-            {'scalar','integer','nonnegative'}));
-addOptional(p,'nTrialsPerRun',12,@(x) validateattributes(x,{'numeric'}, ...
-            {'scalar','integer','nonnegative'}));
-
+addParameter(p,'nRuns',6,@(x) validateattributes(x,{'numeric'}, ...
+             {'scalar','integer','nonnegative'}));
+addParameter(p,'nTrialsPerRun',12,@(x) validateattributes(x,{'numeric'}, ...
+             {'scalar','integer','nonnegative'}));
+addParameter(p,'saveFile',true,@(x) validateattributes(x,{'logical'}, ...
+             {'scalar'}));
 parse(p,subjectId,varargin{:});
 
 subjectId = p.Results.subjectId;
 nRuns = p.Results.nRuns;
 nTrialsPerRun = p.Results.nTrialsPerRun;
+saveFile = p.Results.saveFile;
 
 % Getting file names
 inputDir = BCI_setupdir('stimuli');
@@ -75,32 +77,56 @@ S.nRepetitionPerWord = 12; % number of repetitions per words
 S.nNoiseStimuli = S.nRepetitionPerWord*S.nWordsSelected; % number of noise stimuli per trial
 S.nRepetitionMinimum = 10;
 
-[stim,stimKey] = deal(cell(nRuns,nTrialsPerRun));
-for i = 1:nRuns
-    for j = 1:nTrialsPerRun
-        [stim{i,j},stimKey{i,j}] = BCI_generateStimulus(S);
-    end
-end
-targetWords = {'yes','no','maybe'};
+% Defining target words and how many times they are presented
+targetWords = regexp(fileNamesSelected,'(\w)*_.*','tokens','once');
+targetWords = [targetWords{:}];
 if nTrialsPerRun == 1
     % This option is only relevant for devMode
-    targetWords = targetWords(randi(3));
+    targetWordsAll = targetWords(randi(3));
+    nTargetsAll = 12;
 elseif mod(nTrialsPerRun/S.nWordsSelected,1) ~= 0
     error(['The number of trials per run must be a multiple of the number ',...
            'of target words']);
 else
-    targetWords = repmat(targetWords,nTrialsPerRun/S.nWordsSelected,1);
-    targetWords = repmat(targetWords(:)',nRuns,1);
+    % Target words
+    targetWordsAll = repmat(targetWords,nTrialsPerRun/S.nWordsSelected,1);
+    targetWordsAll = repmat(targetWordsAll(:)',nRuns,1);
+    % Number of target words. This makes sure that across the whole
+    % experiment each target word will be presented the same amount of 
+    % times. 
+    nTargetsAll = repmat([10,11,12;12,10,11;11,12,10],1,nTrialsPerRun/3);
+    nTargetsAll = repmat(nTargetsAll,nRuns/3,1);
     for i = 1:nRuns
-        targetWords(i,:) = targetWords(i,randperm(nTrialsPerRun));
+        randVec = randperm(nTrialsPerRun);
+        targetWordsAll(i,:) = targetWordsAll(i,randVec);
+        nTargetsAll(i,:) = nTargetsAll(i,randVec);
+    end
+end
+
+% Double check if each target word is persented equal times
+check = cellfun(@(x) sum(nTargetsAll(ismember(targetWordsAll,x))),unique(targetWordsAll));
+if numel(unique(check)) > 1
+    error(['Number of presentations per target word is not equal acros', ...
+           ' the experiment']);
+end
+
+% Generating stimului
+[stimAll,stimKeyAll] = deal(cell(nRuns,nTrialsPerRun));
+for i = 1:nRuns
+    for j = 1:nTrialsPerRun
+        S.targetKey = find(ismember(targetWords,targetWordsAll(i,j)));
+        S.nTargets = nTargetsAll(i,j);
+        [stimAll{i,j},stimKeyAll{i,j}] = BCI_generateStimulus(S);
     end
 end
 
 % Full path to the file containing the stimuli
-filePath = fullfile(BCI_setupdir('data_behav_sub',subjectId),'stim.mat');
-if exist(filePath,'file')
-    delete(filePath);
+if saveFile
+    filePath = fullfile(BCI_setupdir('data_behav_sub',subjectId),'stim.mat');
+    if exist(filePath,'file')
+        delete(filePath);
+    end
+    save(filePath,'stimAll','stimKeyAll','targetWordsAll','nTargetsAll');
 end
-save(filePath,'stim','stimKey','targetWords');
 
 end
