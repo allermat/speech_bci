@@ -1,0 +1,8 @@
+vocode('noise','n','greenwood','half',320,6,'sent.wav', 'nn320.wav')
+vocode('noise','i','greenwood','half',320,6,'sent.wav', 'ni320.wav')
+vocode('sine','n','greenwood','half',320,6,'sent.wav', 'sn320.wav')
+vocode('sine','i','greenwood','half',320,6,'sent.wav', 'si320.wav')
+vocode('noise','n','greenwood','half',30,6,'sent.wav', 'nn30.wav')
+vocode('noise','i','greenwood','half',30,6,'sent.wav', 'ni30.wav')
+vocode('sine','n','greenwood','half',30,6,'sent.wav', 'sn30.wav')
+vocode('sine','i','greenwood','half',30,6,'sent.wav', 'si30.wav')

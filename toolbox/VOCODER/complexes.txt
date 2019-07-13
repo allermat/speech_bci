@@ -1,0 +1,76 @@
+USING BANDPASS FILTERED HARMONIC COMPLEXES TO SIMULATE A 
+COCHLEAR IMPLANT
+
+The Vocode software described in this file is free for academic use. For commercial 
+use please contact bob.carlyon@mrc-cbu.cam.ac.uk for more information.
+
+When a large number of harmonics are summed in sine phase and then bandpass 
+filtered, their waveform resembles that of a bandpass filtered pulse train. When the 
+spacing between harmonics (i.e., the F0) is small relative to the bandwidths of the 
+auditory filters excited by the complex, the pitch is derived from temporal cues rather 
+than from the excitation pattern (Shackleton and Carlyon, 1994). Carlyon (1999)has 
+argued that this, along with other features, makes bandpass filtered complexes a good 
+analogue of the electrical pulse trains used in many cochlear implants. The analogy is 
+tightest when one uses a single pulse train filtered into a high frequency region, and 
+when the stimuli are presented against a noise background. In this case, basilar 
+membrane ringing is minimised (as the auditory filters are wide at high centre 
+frequencies), and the noise masks cochlear distortion products. Software for 
+generating arbitrary bandpass-filtered pulse trains under these conditions is available 
+from our website (www.mrc-cbu.cam.ac.uk/simplant). It runs under windows 95 and 
+was written by Rhodri Cusack.
+
+VOCODE uses a slightly different approach. It extends Bob Shannon’s (1995) 
+method of “encoding speech using primarily temporal cues”, in which he modulated 
+bandlimited noises, to the modulation of bandpass filtered harmonic complexes. 
+Carlyon (1999) argued that the harmonic complexes are a better analogy with 
+electrical stimulation because the carrier is a deterministic stimulus. This allows you 
+to try out strategies which could be also implemented electrically, for example using 
+different carrier rates on different channels. A weakness is that, because speech is 
+broadband, it is necessary to stimulate bands with low center frequencies, where 
+harmonics of high fundamentals may be resolved. Hence there is the danger that by 
+changing the F0 one may be introducing “place of excitation” cues to pitch. 
+
+A partial solution is provided by the use of alternating phase complexes (in which the 
+odd-numbered components are in sine phase and the even-numbered are in cosine 
+phase). This doubles the number of peaks in the envelope, and, when pitch is 
+processed using temporal cues, doubles the perceived pitch; however, when place-of-
+excitation cues are present, the pitch remains unaltered because the power spectrum is 
+untouched (Shackleton and Carlyon, 1994). This means that:
+
+a) when pitch is encoded temporally you can get away with half the F0 and not affect 
+the pitch markedly, and
+
+b) you can check that pitch IS being perceived using temporal cues by switching to 
+alternating phase and seeing if the pitch changes (IMPORTANT NOTE: this 
+only works over headphones because the crappy speaker on your PC and the room 
+acoustics will distort the phase spectrum).
+
+The strictest way of implementing the test described in b) is to listen to each band 
+separately and check that phase affects the pitch in each one. However, when resolved 
+harmonics are present they tend to dominate pitch (Ritsma, 1967), so to a first 
+approximation you can just set everything to alternating phase and see if the pitch 
+changes.
+
+Questions concerning the rationale and instructions contained in this file can be 
+addressed to bob.carlyon@mrc-cbu.cam.ac.uk 
+Questions on the code should be sent to j.lyzenga@azvu.nl
+
+If you use the software and produced a published article I would be grateful for a 
+copy, an acknowledgement, and for gratuitous references to my research.
+
+Bob Carlyon, September 1999
+
+References
+Carlyon, R. P. (1999). "Using bandpass filtered harmonic complexes to investigate 
+acoustic and electric hearing," 1999 Conference on Implantable Auditory Prostheses; 
+Asilomar, CA.
+
+Ritsma, R. J. (1967). "Frequencies dominant in the perception of the pitch of complex 
+sounds,"  J. Acoust. Soc. Am. 42, 191-198. 
+
+Shackleton, T. M. and Carlyon, R. P. (1994). "The role of resolved and unresolved 
+harmonics in pitch perception and frequency modulation discrimination,"  J. Acoust. 
+Soc. Am. 95, 3529-3540. 
+
+Shannon, R. V., Zeng, F.-G., Kamath, V., Wygonski, J. and  Ekelid, M. (1995). 
+"Speech recognition with primarily temporal cues,"  Science 270, 303-304. 

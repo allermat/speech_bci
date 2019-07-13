@@ -1,0 +1,207 @@
+function vocode(excitation, mapping, filters, rectification, smoothing, nChannels, InputFile, OutputFile)
+
+%  VOCODE - This program reconstructs speech as a sum of 'nChannels' 
+%	noise bands or sinusoids.
+%
+%   vocode(excitation, mapping, filters, rectification, smoothing, nChannels, inputFile, outputFile)
+%	excitation - 'noise' or 'sine'
+%	mapping of channels - 'n'(ormal) or 'i'(nverted)
+%	filters - 'greenwood', 'linear', 'mel' or 'log'
+%	rectification - 'half' or 'full'
+%	smoothing (filter cutoff frequency)
+%       nChannels - the number of channels
+%       inputFile - input filename in quotes, e.g., 'heed.wav'
+%       outputFile- output filename in quotes, e.g., 'heed2.wav'
+%
+%	For example, to get an interesting variety of outputs with 6 channels,
+%	do the following commands:
+%	vocode('noise','n','greenwood','half',320,6,'sent.wav', 'nn320.wav')
+%	vocode('noise','i','greenwood','half',320,6,'sent.wav', 'ni320.wav')
+%	vocode('sine','n','greenwood','half',320,6,'sent.wav', 'sn320.wav')
+%	vocode('sine','i','greenwood','half',320,6,'sent.wav', 'si320.wav')
+%	vocode('noise','n','greenwood','half',30,6,'sent.wav', 'nn30.wav')
+%	vocode('noise','i','greenwood','half',30,6,'sent.wav', 'ni30.wav')
+%	vocode('sine','n','greenwood','half',30,6,'sent.wav', 'sn30.wav')
+%	vocode('sine','i','greenwood','half',30,6,'sent.wav', 'si30.wav')
+%
+%	These commands are contained in file 'run.m'
+%
+
+%   To listen to the output file, just type: play OutputFile
+%
+% Stuart Rosen (1998) based on the work of P Loizou
+% (including various functions that are solely due to him, 
+% e.g. gethdr and play
+% stuart@phon.ucl.ac.uk
+
+DEBUG=0;
+
+if nargin<7
+   fprintf('Type: help vocode for more help.\n\n');
+   return;
+end
+
+if smoothing<=0, fprintf('The low pass cutoff of the smoothing filter must be greater than 0.\n\n'); 
+   return;
+end
+
+if nChannels<2, fprintf('The number of channels has to be greater than 1.\n\n'); 
+   return;
+end
+
+fprintf('Processing %s -> %s\n', InputFile, OutputFile);
+
+fpin=fopen(InputFile,'r');
+if fpin<=0
+  fprintf('\nERROR! Could not open input file: %s\n',InputFile);
+  return;
+end
+
+% get the extension of filename
+ext = get_ext(lower(InputFile)); 
+
+% read the header in the input file, and return the sampling frequency (Srate) --
+%
+[HDRSIZE, Srate, bpsa, ftype] =  gethdr(fpin,ext);
+
+
+% --- read the whole data file ----
+%
+x=fread(fpin,inf,ftype);
+n_samples=length(x);
+
+meen=mean(x);
+x= x - meen; %----------remove any DC bias---
+
+%---------------------Design the filters ----------------
+%
+
+[filterA,filterB,center]=estfilt(nChannels,filters,Srate,DEBUG);
+
+srat2=Srate/2;
+   
+% -- pre-emphasis filter coefficients - NOT USED HERE
+%
+%   bp = exp(-1200*2*pi/Srate);   
+%   ap = exp(-3000*2*pi/Srate);
+
+
+% --- design low-pass envelope filter ----------
+%
+[blo,alo]=butter(2, smoothing/srat2);
+
+% --- in case sampling freq > 12 kHz, bandlimit signal to 6 kHz ----
+%
+if srat2>6000,  % in case sampling freq > 12 kHz, limit input signal to 6 kHz
+	LPF=1; 
+	[blpf, alpf]=ellip(6,0.5,50,6000/srat2); 
+	x=filter(blpf,alpf,x); end;
+else LPF=0; 
+end;  
+	
+% PRE-EMPHASIS NOT USED IN THIS VERSION
+%----Pre-emphasize first ----------
+%
+%x = filter([1 -bp],[1 -ap],x); 
+
+% create buffers for the necessary waveforms
+% 'y' contains a single output waveform, 
+%	the original after filtering through a bandpass filter
+% 'ModCarriers' contains the complete set of nChannel modulated white noises or 
+%  	sine waves, crreated by low-pass filtering the 'y' waveform, 
+% 	and multiplying the resultant by an appropriate carrier
+% 'band' contains the waveform associated with a single output channel, the modulated white
+%	noise or sinusoid after filtering
+% 'wave' contains the final output waveform constructing by adding together the ModCarriers,
+%	which are first filtered by a filter matched to the input filter
+%
+%
+ModCarriers =zeros(nChannels,n_samples);
+y=zeros(1,n_samples);
+wave=zeros(1,n_samples);
+band=zeros(1,n_samples);
+
+% rms levels of the original filter-bank outputs are stored in the vector 'levels'
+
+levels = zeros(1, nChannels);
+
+% ----------------------------------------------------------------------%
+% First construct the component modulated carriers for all channels  	%
+% ----------------------------------------------------------------------%
+for i=1:nChannels
+	y=filter(filterB(i,:),filterA(i,:),x)';
+	level(i)=norm(y,2);
+	if strcmp(rectification,'half') == 1 
+		%-- half-wave rectify and smooth the filtered signal
+		y=filter(blo,alo,0.5*(abs(y)+y));
+	elseif strcmp(rectification,'full') == 1
+		%-- full-wave rectify and smooth the filtered signal
+		y=filter(blo,alo,abs(y));
+	else fprintf('\nERROR! Rectification must be half or full\n');
+		return;
+	end
+
+	if strcmp(excitation,'noise') == 1 
+		% -- excite with noise ---
+		ModCarriers(i,:) =y.*sign(rand(1,n_samples)-0.5);
+	elseif strcmp(excitation, 'sine')==1  
+		% ---- multiply by a sine wave carrier of the appropriate carrier ----
+		if strcmp(mapping,'n') == 1 
+			ModCarriers(i,:) =y.*sin(center(i)*2.0*pi*[0:(n_samples-1)]/Srate); 
+		elseif strcmp(mapping,'i') == 1 
+			ModCarriers(i,:) =y.*sin(center((nChannels+1)-i)*2.0*pi*[0:(n_samples-1)]/Srate); 
+		else fprintf('\nERROR! Mapping must be n or i\n');
+			return;
+		end
+	else fprintf('\nERROR! Excitation must be sine or noise\n');
+		return;
+	end
+end
+
+% ----------------------------------------------------------------------%
+% Now filter the components (both noise and sine), and add together 
+% into the appropriate order, scaling for equal rms per channel   				%
+% ----------------------------------------------------------------------%
+for i=1:nChannels
+	if strcmp(mapping,'n') == 1 
+		band=filter(filterB(i,:),filterA(i,:), ModCarriers(i,:));
+		% scale component output waveform to have 
+		% equal rms to input component
+		band=band*level(i)/norm(band,2);
+	elseif strcmp(mapping,'i') == 1 
+		band=filter(filterB((nChannels+1)-i,:),filterA((nChannels+1)-i,:), ModCarriers(i,:));
+		% scale component output waveform to have 
+		% equal rms to input component
+		band=band*level((nChannels+1)-i)/norm(band,2);
+	end
+
+	wave=wave+band;  % accumulate waveforms
+end
+
+
+if LPF==1, wave=filter(blpf,alpf,wave); end;
+
+
+% ------------ now save output to a file -----------
+%
+
+% --- first check that no sample point leads to an overload
+
+max_sample = max(abs(wave));
+if max_sample > 32767	% ---- !! OVERLOAD !! -----
+	% figure out degree of attenuation necessary
+	ratio = 32760/max_sample;
+	wave = wave * ratio;
+	fprintf('!! WARNING -- OVERLOAD !! File scaled by %f = %f dB\n', ratio, 20*log10(ratio));
+end
+
+fpout = fopen(OutputFile,'w+');
+if fpout>=0
+ savehder(fpin,fpout,ext,n_samples)
+ fclose(fpin);
+ fwrite(fpout, wave,'short');
+ fclose(fpout);
+else
+ fprintf('ERROR in path! Could not save file.\n');
+ fclose(fpout);
+end
