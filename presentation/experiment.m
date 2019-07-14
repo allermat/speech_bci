@@ -61,6 +61,7 @@ else
 end
 fs = 44100;
 nrchannels = 2;
+wordFreq = 1.6; % Frequency of words in stimulus in Hz
 
 %% setting up experiment environment
 % always needs to be put if using KbName!!!!!
@@ -76,26 +77,28 @@ filePath = fullfile(BCI_setupdir('data_behav_sub',subjectId),'stim.mat');
 
 if ~syncMode
     if devMode || practiceMode
-        [stim,stimKey,targetWords,nTargets] = ...
+        [stimAll,stimKeyAll,targetWordsAll,nTargetsAll] = ...
             BCI_generateAllStimuli(subjectId,'nRuns',nRuns,'nTrialsPerRun', ...
                                    nTrialsPerRun,'saveFile',false);
     else
-        load(filePath,'stim','stimKey','targetWords','nTargets');
+        load(filePath,'stimAll','stimKeyAll','targetWordsAll','nTargetsAll');
     end
 else
     % Generate 50 ms Gaussian white noise bursts followed by 450 ms silence
-    noise = cat(1,randn(round(fs*0.05),72),zeros(round(fs*0.45),72));
-    stim = {noise(:)'};
-    stimKey = {ones(1,72)};
-    targetWords = {'yes'};
-    nTargets = 12;
+    noiseDuration = 0.05;
+    noise = cat(1,randn(round(fs*noiseDuration),72),...
+                zeros(round(fs*(1/wordFreq-noiseDuration)),72));
+    stimAll = {noise(:)'};
+    stimKeyAll = {ones(1,72)};
+    targetWordsAll = {'yes'};
+    nTargetsAll = 12;
 end
 
 
 
 %% Setting up variables
 [tStartSound,tEndSound,responses] = deal(NaN(nTrialsPerRun,1));
-correctResponses = nTargets(iRun,:);
+correctResponses = nTargetsAll(iRun,:);
 abort = false; % flag for aborting the run
 
 try
@@ -131,9 +134,9 @@ try
             break;
         end
         % Select sound for current trial and extract stim info from sound filename
-        targetWordCurrent = targetWords{iRun,iTrial};
-        audioCurrent = repmat(stim{iRun,iTrial},2,1);
-        stimTriggerCurrent = stimKey{iRun,iTrial};
+        targetWordCurrent = targetWordsAll{iRun,iTrial};
+        audioCurrent = repmat(stimAll{iRun,iTrial},2,1);
+        stimTriggerCurrent = stimKeyAll{iRun,iTrial};
         
         
         % Display target word
@@ -235,7 +238,7 @@ try
                     'Target_word','Response','Correct_response'};
     data = table(repmat(subjectId,nTrialsPerRun,1),repmat(iRun,nTrialsPerRun,1),...
                  (1:nTrialsPerRun)',tStartSound,tEndSound,... 
-                 targetWords(iRun,:),responses,correctResponses,...
+                 targetWordsAll(iRun,:),responses,correctResponses,...
                  'VariableNames',dataVarNames);
     
     %% Compute performance

@@ -10,6 +10,8 @@ addParameter(p,'nRuns',6,@(x) validateattributes(x,{'numeric'}, ...
              {'scalar','integer','nonnegative'}));
 addParameter(p,'nTrialsPerRun',12,@(x) validateattributes(x,{'numeric'}, ...
              {'scalar','integer','nonnegative'}));
+addParameter(p,'wordFreq',1.6,@(x) validateattributes(x,{'numeric'}, ...
+             {'scalar','nonnegative'}));
 addParameter(p,'noiseMode','twoTokens',@(x) ismember(x,validNoiseModes));
 addParameter(p,'saveFile',true,@(x) validateattributes(x,{'logical'}, ...
              {'scalar'}));
@@ -18,15 +20,15 @@ parse(p,subjectId,varargin{:});
 subjectId = p.Results.subjectId;
 nRuns = p.Results.nRuns;
 nTrialsPerRun = p.Results.nTrialsPerRun;
+wordFreq = p.Results.wordFreq;
 noiseMode = p.Results.noiseMode;
 saveFile = p.Results.saveFile;
 
 % Getting file names
 inputDir = BCI_setupdir('stimuli');
-wordFreq = '1.6Hz';
 saveDf = cd(inputDir);
 switch wordFreq
-    case '2Hz'
+    case 2
         filesNoise = dir('*_2Hz.wav');
         filesWords = {'yes_yes-maybe_2Hz.wav'
                       'yes_yes-thirsty_2Hz.wav'
@@ -34,7 +36,7 @@ switch wordFreq
                       'no_no-thirsty_2Hz.wav'
                       'maybe_maybe-thirsty_2Hz.wav'
                       'maybe_yes-maybe_2Hz.wav'};
-    case '1.6Hz'
+    case 1.6
         filesNoise = dir;
         filesNoise = {filesNoise.name}';
         filesNoise = filesNoise(~cellfun(@isempty,... 

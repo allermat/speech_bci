@@ -42,10 +42,10 @@ for i = 1:nNoiseStimuli
             'UniformOutput',false);
         % Choose randomly either of the instances of each word
         idx = cellfun(@(x) x(randi(numel(x))),temp);
-        noise{i} = BCI_generateVocodedNoise(audioNoise(idx),nCh);
+        noise{i} = BCI_generateVocodedNoise(audioNoise(idx),nCh,'lpCutoff',2);
     else
         % Use all available tokens to generate noise
-        noise{i} = BCI_generateVocodedNoise(audioNoise,nCh);
+        noise{i} = BCI_generateVocodedNoise(audioNoise,nCh,'lpCutoff',2);
     end
 end
 

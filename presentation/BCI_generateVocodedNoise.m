@@ -4,18 +4,21 @@ p = inputParser;
 
 addRequired(p,'audio2vocode',@(x) isstruct(x) && isfield(x,'y') && isfield(x,'Fs'));
 addRequired(p,'nCh',@(x) validateattributes(x,{'numeric'},{'scalar','integer'}));
+addParameter(p,'lpCutoff',30,@(x) validateattributes(x,{'numeric'},{'scalar'}));
 addParameter(p,'saveFile',false,@(x) validateattributes(x,{'logical'},{'scalar'}));
+
 
 parse(p,audio2vocode,nCh,varargin{:});
 
 audio2vocode = p.Results.audio2vocode;
 nCh = p.Results.nCh;
+lpCutoff = p.Results.lpCutoff;
 saveFile = p.Results.saveFile;
 
 env_all = [];
 for f=1:size(audio2vocode,1)
     [~,envelopes,~,~,levels] = vocode_ma('noise', 'n', 'greenwood', ...
-        'half', 30, nCh, audio2vocode(f), '');
+        'half', lpCutoff, nCh, audio2vocode(f), '');
 %     for i=1:nCh
 %         envelopes(i,:) = envelopes(i,:)*levels(i)/norm(envelopes(i,:),2);
 %     end
