@@ -2,9 +2,9 @@ function [stim,stimKey] = BCI_generateStimulus(S)
 
 p = inputParser;
 
-fieldsReqS = {'audioLoaded','wordsLoaded','nCh','nNoiseStimuli',...
+fieldsReqS = {'audioNoise','audioWords','wordsLoaded','nCh','nNoiseStimuli',...
               'nRepetitionPerWord','nTargets','targetKey',...
-              'nRepetitionMinimum','wordKey'};
+              'nRepetitionMinimum','wordKey','randSelect'};
 
 checkS = @(x) all(isfield(x,fieldsReqS));
 
@@ -15,7 +15,8 @@ parse(p,S);
 S = p.Results.S;
 
 % unpacking input into variables
-audioLoaded = S.audioLoaded;
+audioNoise = S.audioNoise;
+audioWords = S.audioWords;
 wordsLoaded = S.wordsLoaded;
 nCh = S.nCh;
 nNoiseStimuli = S.nNoiseStimuli;
@@ -24,18 +25,28 @@ nRepetitionMinimum = S.nRepetitionMinimum;
 wordKey = S.wordKey;
 uniqueWords = unique(wordsLoaded);
 nUniqueWords = numel(uniqueWords);
+randSelect = S.randSelect;
 
-% Generate noise using all words
+% Generate noise
 noise = cell(nNoiseStimuli,1);
 for i = 1:nNoiseStimuli
-    
-    % First find the indices of each repetition of each word in the loaded 
-    % audio data
-    temp = cellfun(@(x) find(ismember(wordsLoaded,x)),uniqueWords,...
-                   'UniformOutput',false);
-    % Choose randomly either of the instances of each word
-    idx = cellfun(@(x) x(randi(numel(x))),temp);
-    noise{i} = BCI_generateVocodedNoise(audioLoaded(idx),nCh);
+    if randSelect
+        % Select tokens randomly from the word set
+        if numel(audioNoise) ~= numel(audioWords)
+            error(['Random selection of tokens for noise requires the same word',...
+                  'set for noise and words']);
+        end
+        % First find the indices of each repetition of each word in the loaded
+        % audio data
+        temp = cellfun(@(x) find(ismember(wordsLoaded,x)),uniqueWords,...
+            'UniformOutput',false);
+        % Choose randomly either of the instances of each word
+        idx = cellfun(@(x) x(randi(numel(x))),temp);
+        noise{i} = BCI_generateVocodedNoise(audioNoise(idx),nCh);
+    else
+        % Use all available tokens to generate noise
+        noise{i} = BCI_generateVocodedNoise(audioNoise,nCh);
+    end
 end
 
 % Vocode words
@@ -46,7 +57,7 @@ for iRep = 1:nRepetitionPerWord
         idx = find(ismember(wordsLoaded,uniqueWords{iWord}));
         % Choose randomly either of the instances of the words
         [~,~,~,wordsAll{iRep,iWord}] = vocode_ma('noise','n','greenwood','half', ...
-            30,nCh,audioLoaded(idx(randi(2))),'');
+            30,nCh,audioWords(idx(randi(2))),'');
         wordKeysAll(iRep,iWord) = wordKey(iWord);
     end
 end

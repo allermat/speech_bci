@@ -1,5 +1,7 @@
 function [stimAll,stimKeyAll,targetWordsAll,nTargetsAll] = BCI_generateAllStimuli(subjectId,varargin)
 
+validNoiseModes = {'allTokens','twoTokens','oneTokenRand'};
+
 p = inputParser;
 
 addRequired(p,'subjectId',@(x) validateattributes(x,{'numeric'}, ...
@@ -8,6 +10,7 @@ addParameter(p,'nRuns',6,@(x) validateattributes(x,{'numeric'}, ...
              {'scalar','integer','nonnegative'}));
 addParameter(p,'nTrialsPerRun',12,@(x) validateattributes(x,{'numeric'}, ...
              {'scalar','integer','nonnegative'}));
+addParameter(p,'noiseMode','twoTokens',@(x) ismember(x,validNoiseModes));
 addParameter(p,'saveFile',true,@(x) validateattributes(x,{'logical'}, ...
              {'scalar'}));
 parse(p,subjectId,varargin{:});
@@ -15,55 +18,77 @@ parse(p,subjectId,varargin{:});
 subjectId = p.Results.subjectId;
 nRuns = p.Results.nRuns;
 nTrialsPerRun = p.Results.nTrialsPerRun;
+noiseMode = p.Results.noiseMode;
 saveFile = p.Results.saveFile;
 
 % Getting file names
 inputDir = BCI_setupdir('stimuli');
 wordFreq = '1.6Hz';
+saveDf = cd(inputDir);
 switch wordFreq
     case '2Hz'
-        filesForNoise = {'yes_yes-maybe_2Hz.wav'
-                         'yes_yes-thirsty_2Hz.wav'
-                         'no_no-maybe_2Hz.wav'
-                         'no_no-thirsty_2Hz.wav'
-                         'maybe_maybe-thirsty_2Hz.wav'
-                         'maybe_yes-maybe_2Hz.wav'};
+        filesNoise = dir('*_2Hz.wav');
+        filesWords = {'yes_yes-maybe_2Hz.wav'
+                      'yes_yes-thirsty_2Hz.wav'
+                      'no_no-maybe_2Hz.wav'
+                      'no_no-thirsty_2Hz.wav'
+                      'maybe_maybe-thirsty_2Hz.wav'
+                      'maybe_yes-maybe_2Hz.wav'};
     case '1.6Hz'
-        filesForNoise = {'yes_yes-maybe.wav'
-                         'yes_yes-thirsty.wav'
-                         'no_no-maybe.wav'
-                         'no_no-thirsty.wav'
-                         'maybe_maybe-thirsty.wav'
-                         'maybe_yes-maybe.wav'};
+        filesNoise = dir;
+        filesNoise = {filesNoise.name}';
+        filesNoise = filesNoise(~cellfun(@isempty,... 
+            regexp(filesNoise,'[a-zA-Z]*_[a-zA-Z]*-[a-zA-Z]*.wav')));
+        filesWords = {'yes_yes-maybe.wav'
+                      'yes_yes-thirsty.wav'
+                      'no_no-maybe.wav'
+                      'no_no-thirsty.wav'
+                      'maybe_maybe-thirsty.wav'
+                      'maybe_yes-maybe.wav'};
     otherwise
         error('Unrecognized word frequency');
 end
+cd(saveDf);
+
+% Removing 'thirsty' from the set of words
+filesNoise = filesNoise(~cellfun(@isempty,...
+                        regexp(filesNoise,'^(yes|no|maybe).*\.wav')));
 
 % First read the words from disk and perform the vocoding on the already
 % loaded data, it is more economical this way.
-[y,Fs] = cellfun(@audioread,fullfile(inputDir,filesForNoise'),...
+[y,Fs] = cellfun(@audioread,fullfile(inputDir,filesNoise'),...
                  'UniformOutput',false);
-audioLoaded = cell2struct(cat(1,y,Fs),{'y','Fs'},1);
+audioNoise = cell2struct(cat(1,y,Fs),{'y','Fs'},1);
 
 % Making sure all files are the same length. Sometimes they differ by 1
 % sample. 
-minLength = min(cellfun(@length,{audioLoaded.y}));
-for i = 1:size(audioLoaded,1)
-    audioLoaded(i).y = audioLoaded(i).y(1:minLength);
+minLength = min(cellfun(@length,{audioNoise.y}));
+for i = 1:size(audioNoise,1)
+    audioNoise(i).y = audioNoise(i).y(1:minLength);
+end
+% match RMS of input files
+for f=1:size(audioNoise,1)
+   audioNoise(f).y = audioNoise(f).y .* 1./rms(audioNoise(f).y);
 end
 
-% match RMS of input files
-for f=1:size(audioLoaded,1)
-   audioLoaded(f).y = audioLoaded(f).y .* 1./rms(audioLoaded(f).y);
-   %rms(audio2vocode(f).y)
-end
-wordsLoaded = regexp(filesForNoise,'(\w)*_.*','tokens','once');
+wordsLoaded = regexp(filesWords,'(\w)*_.*','tokens','once');
 wordsLoaded = [wordsLoaded{:}];
 uniqueWords = unique(wordsLoaded);
 nUniqueWords = numel(uniqueWords);
 % To match the keys of the previous pilot yes-1, no-2, maybe-3
 wordKey = [3,2,1];
-S.audioLoaded = audioLoaded;
+S.audioWords = audioNoise(ismember(filesNoise,filesWords));
+switch noiseMode
+    case 'allTokens'
+        S.audioNoise = audioNoise;
+        S.randSelect = false;
+    case 'twoTokens'
+        S.audioNoise = S.audioWords;
+        S.randSelect = false;
+    case 'oneTokenRand'
+        S.audioNoise = S.audioWords;
+        S.randSelect = true;
+end
 S.wordsLoaded = wordsLoaded;
 S.nCh = 16; % number of channels for vocoding
 S.nRepetitionPerWord = 12; % number of repetitions per words
