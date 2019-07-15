@@ -74,6 +74,3 @@ PsychPortAudio('Start',pahandle,1,0);
 PsychPortAudio('Stop',pahandle,1);
 
 PsychPortAudio('Volume',pahandle,1);
-
-% Set the volume to half
-%PsychPortAudio('Volume', pahandle, 0.5);

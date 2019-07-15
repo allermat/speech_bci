@@ -180,7 +180,7 @@ try
         
         if ~abort
             % Present question
-            txt = sprintf('How many targets\ndid you count?\n10(Y)   11(G)   12(B)');
+            txt = sprintf('How many targets\ndid you count?\n10(Y)   11(G)   12(R)');
             DrawFormattedText(window, txt, 'center', 'center', black);
             Screen('Flip', window);
             % Send trigger to indicate the onset of the response screen
@@ -202,7 +202,7 @@ try
                 switch buttonPressed{1}
                     case 'RY', respCurrent = 10;
                     case 'RG', respCurrent = 11;
-                    case 'RB', respCurrent = 12;
+                    case 'RR', respCurrent = 12;
                     otherwise, respCurrent = 0;
                 end
                 % Send response trigger
@@ -233,32 +233,39 @@ try
         
     end % End trial loop
     
+    
+    
+    %% Compute performance
+    score = (sum((responses == correctResponses'))/numel(correctResponses))*100;
+    
+    %% Exit message for subject
+    DrawFormattedText(window, sprintf('You got %.1f%% correct',score), 'center', 'center', black);
+    Screen('Flip', window);
+    WaitSecs(3);
+    
     %% Collect data
     dataVarNames = {'Subject','Run','Trial','Sound_onset','Sound_offset', ...
                     'Target_word','Response','Correct_response'};
     data = table(repmat(subjectId,nTrialsPerRun,1),repmat(iRun,nTrialsPerRun,1),...
                  (1:nTrialsPerRun)',tStartSound,tEndSound,... 
-                 targetWordsAll(iRun,:),responses,correctResponses,...
+                 targetWordsAll(iRun,:)',responses,correctResponses',...
                  'VariableNames',dataVarNames);
-    
-    %% Compute performance
-    score = ((responses == correctResponses)/numel(correctResponses))*100;
-    
-    %% Exit message for subject
-    DrawFormattedText(window, sprintf('You got %d%% correct',score), 'center', 'center', black);
-    Screen('Flip', window);
-    WaitSecs(3);
+    % Saving experiment data
+    savedfname = fullfile(BCI_setupdir('data_behav_sub',subjectId),...
+        sprintf('subj%d_run%d_%s.mat',subjectId,...
+        iRun,datestr(now,'ddmmyyyy_HHMM')));
+    save(savedfname,'data');
     
     %% Shut down and save data
     es_ptb_close;
     
     %% Show experimenter some peformance feedback
-    fprintf('\nTrials completed = %d\n',trial);
-    fprintf('\nScore = %d%\n',score);
+    fprintf('\nTrials completed: %d\n',iTrial);
+    fprintf('\nScore: %.1f%%\n',score);
     
     %% Note when script finished
     tExpDur = toc(tExpStart)/60;
-    fprintf('\nTime taken = %f minutes\n',tExpDur);
+    fprintf('\nTime taken = %.1f minutes\n',tExpDur);
 catch e %e is an MException struct
     
     es_ptb_close;

@@ -11,11 +11,7 @@ ListenChar(0);
 ShowCursor();
 
 % Close the audio device
-PsychPortAudio('Close', pahandle);
+PsychPortAudio('Close');
 
 
-% Saving experiment data
-savedfname = fullfile(BCI_setupdir('data_behav_sub',subjectId),...
-                      sprintf('subj%d_run%d_%s.mat',subjectId,...
-                              iRun,datestr(now,'ddmmyyyy_HHMM')));
-save(savedfname);
+
