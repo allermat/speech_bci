@@ -12,7 +12,7 @@ addParameter(p,'nTrialsPerRun',12,@(x) validateattributes(x,{'numeric'}, ...
              {'scalar','integer','nonnegative'}));
 addParameter(p,'wordFreq',1.6,@(x) validateattributes(x,{'numeric'}, ...
              {'scalar','nonnegative'}));
-addParameter(p,'noiseMode','twoTokens',@(x) ismember(x,validNoiseModes));
+addParameter(p,'noiseMode','oneTokenRand',@(x) ismember(x,validNoiseModes));
 addParameter(p,'saveFile',true,@(x) validateattributes(x,{'logical'}, ...
              {'scalar'}));
 parse(p,subjectId,varargin{:});
@@ -97,6 +97,7 @@ S.nRepetitionPerWord = 12; % number of repetitions per words
 S.nNoiseStimuli = S.nRepetitionPerWord*nUniqueWords; % number of noise stimuli per trial
 S.nRepetitionMinimum = 10;
 S.wordKey = wordKey;
+S.noiseLpCutoff = 5; % LP filter cutoff frequency (Hz) for noise vocoding
 
 % Defining target words and how many times they are presented
 targetWords = uniqueWords;

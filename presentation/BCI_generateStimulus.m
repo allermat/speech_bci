@@ -3,7 +3,7 @@ function [stim,stimKey] = BCI_generateStimulus(S)
 p = inputParser;
 
 fieldsReqS = {'audioNoise','audioWords','wordsLoaded','nCh','nNoiseStimuli',...
-              'nRepetitionPerWord','nTargets','targetKey',...
+              'nRepetitionPerWord','nTargets','noiseLpCutoff','targetKey',...
               'nRepetitionMinimum','wordKey','randSelect'};
 
 checkS = @(x) all(isfield(x,fieldsReqS));
@@ -26,6 +26,7 @@ wordKey = S.wordKey;
 uniqueWords = unique(wordsLoaded);
 nUniqueWords = numel(uniqueWords);
 randSelect = S.randSelect;
+noiseLpCutoff = S.noiseLpCutoff;
 
 % Generate noise
 noise = cell(nNoiseStimuli,1);
@@ -42,10 +43,12 @@ for i = 1:nNoiseStimuli
             'UniformOutput',false);
         % Choose randomly either of the instances of each word
         idx = cellfun(@(x) x(randi(numel(x))),temp);
-        noise{i} = BCI_generateVocodedNoise(audioNoise(idx),nCh,'lpCutoff',5);
+        noise{i} = BCI_generateVocodedNoise(audioNoise(idx),nCh, ...
+            'lpCutoff',noiseLpCutoff);
     else
         % Use all available tokens to generate noise
-        noise{i} = BCI_generateVocodedNoise(audioNoise,nCh,'lpCutoff',5);
+        noise{i} = BCI_generateVocodedNoise(audioNoise,nCh, ...
+            'lpCutoff',noiseLpCutoff);
     end
 end
 
