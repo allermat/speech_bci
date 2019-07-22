@@ -5,6 +5,7 @@ sca;
 
 %% Initialise random number generator
 rng('shuffle');
+sCurr = rng;
 
 %% Note when script started
 tExpStart = tic;
@@ -43,7 +44,7 @@ if syncMode
 end
 
 % Developing mode
-devMode = true;
+devMode = false;
 if devMode
     warning('Experiment runs in development mode! '); %#ok
 end
@@ -79,7 +80,8 @@ if ~syncMode
     if devMode || practiceMode
         [stimAll,stimKeyAll,targetWordsAll,nTargetsAll] = ...
             BCI_generateAllStimuli(subjectId,'nRuns',nRuns,'nTrialsPerRun', ...
-                                   nTrialsPerRun,'saveFile',false);
+                                   nTrialsPerRun,'randSeed',sCurr.Seed,...
+                                   'saveFile',false);
     else
         load(filePath,'stimAll','stimKeyAll','targetWordsAll','nTargetsAll');
     end

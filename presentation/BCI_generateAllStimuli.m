@@ -13,6 +13,8 @@ addParameter(p,'nTrialsPerRun',12,@(x) validateattributes(x,{'numeric'}, ...
 addParameter(p,'wordFreq',1.6,@(x) validateattributes(x,{'numeric'}, ...
              {'scalar','nonnegative'}));
 addParameter(p,'noiseMode','oneTokenRand',@(x) ismember(x,validNoiseModes));
+addParameter(p,'randSeed',[],@(x) validateattributes(x,{'numeric'}, ...
+             {'scalar','integer','positive'}));
 addParameter(p,'saveFile',true,@(x) validateattributes(x,{'logical'}, ...
              {'scalar'}));
 parse(p,subjectId,varargin{:});
@@ -22,8 +24,14 @@ nRuns = p.Results.nRuns;
 nTrialsPerRun = p.Results.nTrialsPerRun;
 wordFreq = p.Results.wordFreq;
 noiseMode = p.Results.noiseMode;
+randSeed = p.Results.randSeed;
 saveFile = p.Results.saveFile;
 
+if ismember('randSeed',p.UsingDefaults)
+    rng('shuffle');
+else
+    rng(randSeed);
+end
 % Getting file names
 inputDir = BCI_setupdir('stimuli');
 saveDf = cd(inputDir);
