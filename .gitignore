@@ -31,6 +31,7 @@ parfor_progress.txt
 # Folders to ignore
 behavioural_analysis/
 behavioural_data/
+docs/
 EEG_analysis/
 EEG_data/
 stimuli/
