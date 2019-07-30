@@ -16,27 +16,26 @@ function varargout = BCI_setupdir(varargin)
 %   Some folders are created if not found. 
 %   The required toolboxes are added to the path
 %
-% Copyright Mate Aller 2019
+% Copyright(C) Mate Aller 2019
 
 %% Parsing input. 
 p = inputParser;
 
-validDirIDs = {'anal_behav','anal_eeg','anal_behav_sub',...
-    'anal_eeg_sub','anal_eeg_sub_mvpa','anal_eeg_sub_mvpa_preproc',...
-    'anal_eeg_sub_erp','anal_eeg_sub_tf','anal_scripts','data_behav','data_eeg',...
-    'data_behav_sub','data_eeg_sub','pres','stimuli','study_root',...
-    'toolbox'};
+validDirIDs = {'analysis_behav','analysis_meg','analysis_behav_sub',...
+    'analysis_meg_sub','analysis_meg_sub_mvpa','analysis_meg_sub_mvpa_preproc',...
+    'analysis_meg_sub_erp','analysis_meg_sub_tf','analysis_scripts',...
+    'data_behav','data_meg','data_behav_sub','data_meg_sub','pres',...
+    'stimuli','study_root','toolbox'};
 
 checkDirID = @(x) any(validatestring(x,validDirIDs));
 
 addOptional(p,'dirID',[],checkDirID);
-addOptional(p,'subID',[],@(x) validateattributes(x,{'numeric'},...
-    {'scalar','integer','nonnegative'}));
+addOptional(p,'subID','',@(x) validateattributes(x,{'char'},{'nonempty'}));
 
 parse(p,varargin{:});
 
 dirID = p.Results.dirID;
-subID = num2str(p.Results.subID); % subID is converted to character array here!
+subID = p.Results.subID; % subID is converted to character array here!
 
 %% Setting up the basic directories if necessary. 
 expStage = 'pilot_1';
@@ -64,7 +63,7 @@ if strcmpi(setupID,'PC0220')
 elseif strcmpi(setupID,'DESKTOP-T5R7MNQ')
     baseDir = 'D:';
     mode = 'home';
-elseif strcmpi(setupID,'COLLES-151401')
+elseif ~isempty(regexp(setupID,'^login','once'))
     baseDir = fullfile('/home',userID);
     mode = 'analysis';
 elseif strcmpi(setupID,'STIM22')
@@ -80,31 +79,31 @@ if ~exist(mypath.study_root,'dir')
 end
 addpath(fullfile(mypath.study_root,expStage));
 
-mypath.anal_behav = fullfile(mypath.study_root,expStage,'behavioural_analysis');
-if ~exist(mypath.anal_behav,'dir') && strcmp(mode,'home')
-    mkdir(mypath.anal_behav);
+mypath.analysis_behav = fullfile(mypath.study_root,expStage,'behavioural_analysis');
+if ~exist(mypath.analysis_behav,'dir') && strcmp(mode,'home')
+    mkdir(mypath.analysis_behav);
 end
 
-mypath.anal_eeg = fullfile(mypath.study_root,expStage,'EEG_analysis');
-if ~exist(mypath.anal_eeg,'dir') && any(strcmp(mode,{'home','analysis'}))
-    mkdir(mypath.anal_eeg);
+mypath.analysis_meg = fullfile(mypath.study_root,expStage,'MEG_analysis');
+if ~exist(mypath.analysis_meg,'dir') && any(strcmp(mode,{'home','analysis'}))
+    mkdir(mypath.analysis_meg);
 end
 
-mypath.anal_scripts = fullfile(mypath.study_root,expStage,'analysis_scripts');
+mypath.analysis_scripts = fullfile(mypath.study_root,expStage,'analysis_scripts');
 if any(strcmp(mode,{'home','analysis'}))
-    if ~exist(mypath.anal_scripts,'dir')
-        mkdir(mypath.anal_scripts);
+    if ~exist(mypath.analysis_scripts,'dir')
+        mkdir(mypath.analysis_scripts);
     end
-    addpath(mypath.anal_scripts);
+    addpath(mypath.analysis_scripts);
 end
 mypath.data_behav = fullfile(mypath.study_root,expStage,'behavioural_data');
 if ~exist(mypath.data_behav,'dir') && any(strcmp(mode,{'home','presentation'}))
     mkdir(mypath.data_behav);
 end
 
-mypath.data_eeg = fullfile(mypath.study_root,expStage,'EEG_data');
-if ~exist(mypath.data_eeg,'dir') && any(strcmp(mode,{'home','presentation'}))
-    mkdir(mypath.data_eeg);
+mypath.data_meg = fullfile(mypath.study_root,expStage,'MEG_data');
+if ~exist(mypath.data_meg,'dir') && any(strcmp(mode,{'home','presentation'}))
+    mkdir(mypath.data_meg);
 end
 
 mypath.pres = fullfile(mypath.study_root,expStage,'presentation');
@@ -112,7 +111,7 @@ if any(strcmp(mode,{'home','presentation'}))
     if ~exist(mypath.pres,'dir')
         mkdir(mypath.pres);
     end
-    addpath(mypath.pres,mypath.anal_scripts);
+    addpath(mypath.pres,mypath.analysis_scripts);
 end
 
 mypath.toolbox = fullfile(mypath.study_root,expStage,'toolbox');
@@ -125,64 +124,64 @@ addpath(genpath(mypath.toolbox));
 %% Returning the required path
 % If not found either an error is thrown or the folder is created. 
 
-if strcmp(dirID,'anal_behav')
-    outPath = mypath.anal_behav;
-elseif strcmp(dirID,'anal_eeg')
-    outPath = mypath.anal_eeg;
-elseif strcmp(dirID,'anal_behav_sub')
+if strcmp(dirID,'analysis_behav')
+    outPath = mypath.analysis_behav;
+elseif strcmp(dirID,'analysis_meg')
+    outPath = mypath.analysis_meg;
+elseif strcmp(dirID,'analysis_behav_sub')
     if strcmp(subID,'')
         error('Subject ID must be specified!');
     end
-    outPath = fullfile(mypath.anal_behav,subID);
+    outPath = fullfile(mypath.analysis_behav,subID);
     if ~exist(outPath,'dir')
         mkdir(outPath);
     end
-elseif strcmp(dirID,'anal_eeg_sub')
+elseif strcmp(dirID,'analysis_meg_sub')
     if strcmp(subID,'')
         error('Subject ID must be specified!');
     end
-    outPath = fullfile(mypath.anal_eeg,subID);
+    outPath = fullfile(mypath.analysis_meg,subID);
     if ~exist(outPath,'dir')
         mkdir(outPath);
     end
-elseif strcmp(dirID,'anal_eeg_sub_mvpa')
+elseif strcmp(dirID,'analysis_meg_sub_mvpa')
     if strcmp(subID,'')
         error('Subject ID must be specified!');
     end
-    outPath = fullfile(mypath.anal_eeg,subID,'MVPA');
+    outPath = fullfile(mypath.analysis_meg,subID,'MVPA');
     if ~exist(outPath,'dir')
         mkdir(outPath);
     end
-elseif strcmp(dirID,'anal_eeg_sub_mvpa_preproc')
+elseif strcmp(dirID,'analysis_meg_sub_mvpa_preproc')
     if strcmp(subID,'')
         error('Subject ID must be specified!');
     end
-    outPath = fullfile(mypath.anal_eeg,subID,'MVPA','preproc');
+    outPath = fullfile(mypath.analysis_meg,subID,'MVPA','preproc');
     if ~exist(outPath,'dir')
         mkdir(outPath);
     end
-elseif strcmp(dirID,'anal_eeg_sub_erp')
+elseif strcmp(dirID,'analysis_meg_sub_erp')
     if strcmp(subID,'')
         error('Subject ID must be specified!');
     end
-    outPath = fullfile(mypath.anal_eeg,subID,'ERP');
+    outPath = fullfile(mypath.analysis_meg,subID,'ERP');
     if ~exist(outPath,'dir')
         mkdir(outPath);
     end
-elseif strcmp(dirID,'anal_eeg_sub_tf')
+elseif strcmp(dirID,'analysis_meg_sub_tf')
     if strcmp(subID,'')
         error('Subject ID must be specified!');
     end
-    outPath = fullfile(mypath.anal_eeg,subID,'TF');
+    outPath = fullfile(mypath.analysis_meg,subID,'TF');
     if ~exist(outPath,'dir')
         mkdir(outPath);
     end
-elseif strcmp(dirID,'anal_scripts')
-    outPath = mypath.anal_scripts;
+elseif strcmp(dirID,'analysis_scripts')
+    outPath = mypath.analysis_scripts;
 elseif strcmp(dirID,'data_behav')
     outPath = mypath.data_behav;
-elseif strcmp(dirID,'data_eeg')
-    outPath = mypath.data_eeg;
+elseif strcmp(dirID,'data_meg')
+    outPath = mypath.data_meg;
 elseif strcmp(dirID,'data_behav_sub')
     if strcmp(subID,'')
         error('Subject ID must be specified!');
@@ -191,11 +190,11 @@ elseif strcmp(dirID,'data_behav_sub')
     if ~exist(outPath,'dir')
         mkdir(outPath);
     end
-elseif strcmp(dirID,'data_eeg_sub')
+elseif strcmp(dirID,'data_meg_sub')
     if strcmp(subID,'')
         error('Subject ID must be specified!');
     end
-    outPath = fullfile(mypath.data_eeg,subID);
+    outPath = fullfile(mypath.data_meg,subID);
     if ~exist(outPath,'dir')
         mkdir(outPath);
     end
@@ -217,7 +216,7 @@ end
 if ~isempty(outPath)
     varargout{1} = outPath;
 else
-    fprintf('Setup ID: %s\nUser ID: %s\n',setupID,userID);
+    fprintf('\nSetup ID: %s\nUser ID: %s\n\n',setupID,userID);
 end
 
 end
