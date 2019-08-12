@@ -18,7 +18,7 @@ evSamples = evSamples(isReqType);
 trStim = cfg.trialdef.trigdef.trig(ismember(cfg.trialdef.trigdef.type,{'stim'}));
 trTrialStart = cfg.trialdef.trigdef.trig(cfg.trialdef.trigdef.type == 'trialstart');
 
-% Correcting for trigger delay with respect to visual onset
+% Correcting for trigger delay with respect to stimulus onset
 temp = evSamples(ismember(evValues,[trStim',trTrialStart']));
 temp = temp+round(cfg.trialdef.trig_audioonset_corr*hdr.Fs);
 evSamples(ismember(evValues,[trStim',trTrialStart'])) = temp;
@@ -26,6 +26,11 @@ evSamples(ismember(evValues,[trStim',trTrialStart'])) = temp;
 trialStartEvSamples = evSamples(ismember(evValues,trTrialStart));
 stimEvSamples = evSamples(ismember(evValues,trStim));
 stimEvValues = evValues(ismember(evValues,trStim));
+% Offsetting stimulus trigger values to match the actual word onsets
+if isrow(cfg.trialdef.trigOffset)
+    cfg.trialdef.trigOffset = cfg.trialdef.trigOffset';
+end
+stimEvSamples = stimEvSamples+round(cfg.trialdef.trigOffset*hdr.Fs);
 
 nStimuli = numel(stimEvSamples);
 [begSamples,endSamples] = deal(NaN(nStimuli,1));

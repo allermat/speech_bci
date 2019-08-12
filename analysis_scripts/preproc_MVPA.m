@@ -61,12 +61,18 @@ if strcmp(runMode,'compICA')
     fileNames = {listing.name}';
     fileNames = fileNames(~cellfun(@isempty,regexp(fileNames,matchStr,'once')));
     dataBehav = struct2cell(cellfun(@(x) load(x,'data'),fullfile(behavSourceDir,fileNames)));
+    % Load stimuli for trigger correction
+    matchStr = 'stim.mat';
+    fileNames = {listing.name}';
+    fileNames = fileNames(~cellfun(@isempty,regexp(fileNames,matchStr,'once')));
+    dataStim = cellfun(@(x) load(x,'stimAll','stimKeyAll'),...
+                           fullfile(behavSourceDir,fileNames));
     
 end
 
 % Checking for existing result files, in which case the day is skipped
 icaFileName = fullfile(destDir,['ftmeg_ICA_',subID,'.mat']);
-resultFileName = fullfile(destDir,['fteeg_MVPA_',subID,'.mat']);
+resultFileName = fullfile(destDir,['ftmeg_MVPA_',subID,'.mat']);
 if strcmp(runMode,'compICA') && exist(icaFileName,'file')
     warning('ICA has already been computed, returning! ');
     return;
@@ -98,15 +104,28 @@ if strcmp(runMode,'compICA')
         ftDataHp = [];
         
         %% Epoching
+        % Compute trigger offset
+        trig = cell(1,size(dataStim.stimAll,2));
+        fs = 44100;
+        wordFreq = 1.6;
+        incr = round(1/wordFreq*fs);
+        nTrials = size(dataStim.stimAll,2);
+        for j = 1:nTrials
+            nStim = numel(dataStim.stimKeyAll{iFile,j});
+            trig{j} = 1:incr:incr*nStim; 
+        end
+        trigOffset = cellfun(@compTrigOffset,dataStim.stimAll(iFile,:),...
+                             repmat({fs},1,nTrials),trig,'UniformOutput',false);
         % Trial definition
         cfg = struct();
         cfg.headerfile = ...
             fullfile(maxfilterDir,[dataFileNames{iFile},'_trans1st.fif']);
         cfg.trialfun = 'ft_trialfun_eventlocked';
         cfg.trialdef = struct();
-        cfg.trialdef.prestim = 0;
-        cfg.trialdef.poststim = 0.625;
+        cfg.trialdef.prestim = 0.1;
+        cfg.trialdef.poststim = 0.5;
         cfg.trialdef.trigdef = trigDef;
+        cfg.trialdef.trigOffset = cat(2,trigOffset{:});
         meegFiles = s.getField(subID,'meg_files');
         fileSpec = meegFiles(ismember(meegFiles.fileName,dataFileNames{iFile}),:);
         cfg.trialdef.fileSpec = fileSpec;
@@ -119,12 +138,6 @@ if strcmp(runMode,'compICA')
         
         % Clearing unnecessary previous dataset
         ftDataLp = [];
-        
-        %% Baseline correction
-        cfg = struct();
-        cfg.demean = 'yes';
-        cfg.baselinewindow = [0,0.05];
-        ftDataEp = ft_preprocessing(cfg,ftDataEp);
         
         %% Rejecting trials based on artefacts.
         
@@ -172,55 +185,40 @@ if strcmp(runMode,'compICA')
     resultFiles = [];
     
     %% ICA for blink correction
-    % As a general rule, finding Nstable components (from N-channel data)
-    % typically requires more than kN^2 data sample points (at each channel),
-    % where N^2 is the number of weights in the unmixing matrix that ICA is
-    % trying to learn and k is a multiplier.
-    % In our experience, the value of k increases as the number of channels increases.
-    % In our example using 32 channels, we have 30800 data points, giving 30800/32^2 = 30 pts/weight points
     
-    % ICA finds tons of slow wave components, so I should high pass
-    % filter the data at higher frequency (1 Hz) before starting it the
-    % unmixing marix can then also be applied to the original data
-    cfg = struct();
-    cfg.hpfilter = 'yes';
-    cfg.hpfreq = 1;
-    cfg.hpfiltord = 4;
-    cfg.hpfiltdir = 'twopass';
-    ftData_preICA = ft_preprocessing(cfg, ftDataMerged);
-    
-    % Removing overlapping 100 ms segment between S1 and S2 trials
-    cfg            = struct();
-    cfg.toilim     = [-0.1,1.2];
-    ftData_preICA    = ft_redefinetrial(cfg, ftData_preICA);
-    
-    % Divide data into independent components
-    ica_randseed = randi(1000000,1);
-    cfg = struct();
-    cfg.method = 'runica';
-    cfg.channel = 'all';
-    cfg.randomseed = ica_randseed;
-    ftData_IC = ft_componentanalysis(cfg, ftData_preICA);
-    
-    ftData_preICA = [];
-    
-    % Use the unmixing matrix to create independent components
-    ftData_temp = ftDataMerged;
-    for itrl = 1:numel(ftData_temp.trial)
-        ftData_temp.trial{itrl} = ftData_IC.unmixing * ftData_temp.trial{itrl};
+    % Do ICA separately for the two modalities
+    modality = {'megmag','megplanar'};
+    ftData_IC = cell(size(modality));
+    for iMod = 1:numel(modality)
+        
+        % ICA finds tons of slow wave components, so I should high pass
+        % filter the data at higher frequency (1 Hz) before starting it the
+        % unmixing marix can then also be applied to the original data
+        cfg = struct();
+        cfg.channel = modality{iMod};
+        cfg.hpfilter = 'yes';
+        cfg.hpfreq = 1;
+        cfg.hpfiltord = 4;
+        cfg.hpfiltdir = 'twopass';
+        ftData_preICA = ft_preprocessing(cfg, ftDataMerged);
+        
+        % The data went through Maxfilter so some channels might have been
+        % rejected and reconstructed. Find the rank of the data using the first
+        % stimulus and set the number of components in ICA to that number
+        nComp = rank(ftData_preICA.trial{1} * ftData_preICA.trial{1}');
+        % Divide data into independent components
+        ica_randseed(iMod) = randi(1000000,1); %#ok<AGROW>
+        cfg = struct();
+        cfg.method = 'runica';
+        cfg.runica.pca = nComp;
+        cfg.randomseed = ica_randseed(iMod);
+        ftData_IC{iMod} = ft_componentanalysis(cfg, ftData_preICA);
+        
     end
-    ftDataMerged = ftData_temp;
-    %data_rejautom.weights = ic_data.weights;
-    ftDataMerged.unmixing = ftData_IC.unmixing;
-    ftDataMerged.topo = ftData_IC.topo;
-    ftDataMerged.topolabel = ftData_IC.topolabel;
-    
-    ftData_temp = [];
-    
     % Save IC data
     fprintf('\n\nSaving ICA data...\n\n');
-    save(icaFileName,'ftData_IC','ftDataMerged','ica_randseed','-v7.3');
-    
+    save(icaFileName,'ftData_IC','ftDataMerged','modality',...
+        'ica_randseed','-v7.3');
 else
     
     if ~exist(icaFileName,'file')
@@ -231,29 +229,53 @@ else
     fLoaded = load(icaFileName);
     ftData_IC = fLoaded.ftData_IC;
     ftDataMerged = fLoaded.ftDataMerged;
+    modality = fLoaded.modality;
     
-    % inspect independent components (determine artifacts)
+    ftDataClean = cell(size(modality));
+    for iMod = 1:numel(modality)
+        
+        % inspect independent components (determine artifacts)
+        cfg = struct();
+        cfg.viewmode = 'component';
+        cfg.layout = 'neuromag306all';
+        cfg.continuous = 'yes';
+        cfg.blocksize = 20;
+        cfg.channel = 1:16;
+        
+        cfg = ft_databrowser(cfg, ftData_IC{iMod});
+        
+        % Reject ICA components
+        prompt = {'ICA components to be rejected (e.g. [1, 2, 3])'};
+        titleP = 'ICA prompt';
+        lines = [1 70];
+        default = {'[]'};
+        Input = inputdlg(prompt, titleP, lines, default);
+        
+        % Select actual channel modality from original data
+        cfg = struct();
+        cfg.channel = modality{iMod};
+        ftDataOrig = ft_selectdata(cfg,ftDataMerged);
+        
+        % Decompose the original data using the computed unmixing matrix
+        cfg = struct();
+        cfg.unmixing = ftData_IC{iMod}.unmixing;
+        cfg.topolabel = ftData_IC{iMod}.topolabel;
+        ftData_IC_orig = ft_componentanalysis(cfg,ftDataOrig);
+        
+        % Reconstruct the original data excluding the chosen components
+        cfg = struct();
+        cfg.component = eval(Input{:});
+        ftDataClean{iMod} = ft_rejectcomponent(cfg,ftData_IC_orig,ftDataOrig);
+    end
+    
+    % Merge data across modalities
+    ftDataClean = ft_appenddata([],ftDataClean{:});
+    
+    %% Baseline correction
     cfg = struct();
-    cfg.viewmode = 'component';
-    cfg.layout = 'neuromag306all_helmet';
-    cfg.continuous = 'yes';
-    cfg.blocksize = 20;
-    cfg.channel = 1:16;
-    
-    cfg = ft_databrowser(cfg, ftData_IC);
-    
-    % Reject ICA components
-    prompt = {'ICA components to be rejected (e.g. [1, 2, 3])'};
-    titleP = 'ICA prompt';
-    lines = [1 70];
-    default = {'[]'};
-    Input = inputdlg(prompt, titleP, lines, default);
-    
-    cfg = struct();
-    cfg.component = eval(Input{:});
-    
-    ftDataClean = ft_rejectcomponent(cfg, ftDataMerged);
-    ftData_IC = [];
+    cfg.demean = 'yes';
+    cfg.baselinewindow = [-0.1,0];
+    ftDataClean = ft_preprocessing(cfg,ftDataClean);
     
     %% Saving data
     fprintf('\n\nSaving MEG data...\n\n');
