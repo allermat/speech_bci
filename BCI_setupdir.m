@@ -21,8 +21,10 @@ function varargout = BCI_setupdir(varargin)
 %% Parsing input. 
 p = inputParser;
 
-validDirIDs = {'analysis_behav','analysis_meg','analysis_behav_sub',...
-    'analysis_meg_sub','analysis_meg_sub_mvpa','analysis_meg_sub_mvpa_preproc',...
+validDirIDs = {'analysis_behav','analysis_eeg','analysis_meg','analysis_behav_sub',...
+    'analysis_eeg_sub','analysis_eeg_sub_mvpa','analysis_eeg_sub_mvpa_preproc',...
+    'analysis_eeg_sub_erp','analysis_eeg_sub_tf','analysis_meg_sub',...
+    'analysis_meg_sub_mvpa','analysis_meg_sub_mvpa_preproc',...
     'analysis_meg_sub_erp','analysis_meg_sub_tf','analysis_scripts',...
     'data_behav','data_meg','data_behav_sub','data_meg_sub','pres',...
     'stimuli','study_root','toolbox'};
@@ -64,7 +66,7 @@ elseif strcmpi(setupID,'DESKTOP-T5R7MNQ')
     baseDir = 'D:';
     mode = 'home';
 elseif ~isempty(regexp(setupID,'^login','once'))
-    baseDir = fullfile('/home',userID);
+    baseDir = fullfile('/imaging',userID);
     mode = 'analysis';
 elseif strcmpi(setupID,'STIM22')
     baseDir = fullfile('E:','MAller');
@@ -84,6 +86,11 @@ if ~exist(mypath.analysis_behav,'dir') && strcmp(mode,'home')
     mkdir(mypath.analysis_behav);
 end
 
+mypath.analysis_eeg = fullfile(mypath.study_root,expStage,'EEG_analysis');
+if ~exist(mypath.analysis_eeg,'dir') && any(strcmp(mode,{'home','analysis'}))
+    mkdir(mypath.analysis_eeg);
+end
+
 mypath.analysis_meg = fullfile(mypath.study_root,expStage,'MEG_analysis');
 if ~exist(mypath.analysis_meg,'dir') && any(strcmp(mode,{'home','analysis'}))
     mkdir(mypath.analysis_meg);
@@ -101,10 +108,11 @@ if ~exist(mypath.data_behav,'dir') && any(strcmp(mode,{'home','presentation'}))
     mkdir(mypath.data_behav);
 end
 
-mypath.data_meg = fullfile(mypath.study_root,expStage,'MEG_data');
-if ~exist(mypath.data_meg,'dir') && any(strcmp(mode,{'home','presentation'}))
-    mkdir(mypath.data_meg);
-end
+mypath.data_meg = fullfile('/megdata','cbu','speech_bci');
+% mypath.data_meg = fullfile(mypath.study_root,expStage,'MEG_data');
+% if ~exist(mypath.data_meg,'dir') && any(strcmp(mode,{'home','analysis'}))
+%     mkdir(mypath.data_meg);
+% end
 
 mypath.pres = fullfile(mypath.study_root,expStage,'presentation');
 if any(strcmp(mode,{'home','presentation'}))
@@ -126,6 +134,8 @@ addpath(genpath(mypath.toolbox));
 
 if strcmp(dirID,'analysis_behav')
     outPath = mypath.analysis_behav;
+elseif strcmp(dirID,'analysis_eeg')
+    outPath = mypath.analysis_eeg;
 elseif strcmp(dirID,'analysis_meg')
     outPath = mypath.analysis_meg;
 elseif strcmp(dirID,'analysis_behav_sub')
@@ -136,6 +146,46 @@ elseif strcmp(dirID,'analysis_behav_sub')
     if ~exist(outPath,'dir')
         mkdir(outPath);
     end
+elseif strcmp(dirID,'analysis_eeg_sub')
+    if strcmp(subID,'')
+        error('Subject ID must be specified!');
+    end
+    outPath = fullfile(mypath.analysis_eeg,subID);
+    if ~exist(outPath,'dir')
+        mkdir(outPath);
+    end
+elseif strcmp(dirID,'analysis_eeg_sub_mvpa')
+    if strcmp(subID,'')
+        error('Subject ID must be specified!');
+    end
+    outPath = fullfile(mypath.analysis_eeg,subID,'MVPA');
+    if ~exist(outPath,'dir')
+        mkdir(outPath);
+    end
+elseif strcmp(dirID,'analysis_eeg_sub_mvpa_preproc')
+    if strcmp(subID,'')
+        error('Subject ID must be specified!');
+    end
+    outPath = fullfile(mypath.analysis_eeg,subID,'MVPA','preproc');
+    if ~exist(outPath,'dir')
+        mkdir(outPath);
+    end
+elseif strcmp(dirID,'analysis_eeg_sub_erp')
+    if strcmp(subID,'')
+        error('Subject ID must be specified!');
+    end
+    outPath = fullfile(mypath.analysis_eeg,subID,'ERP');
+    if ~exist(outPath,'dir')
+        mkdir(outPath);
+    end
+elseif strcmp(dirID,'analysis_eeg_sub_tf')
+    if strcmp(subID,'')
+        error('Subject ID must be specified!');
+    end
+    outPath = fullfile(mypath.analysis_eeg,subID,'TF');
+    if ~exist(outPath,'dir')
+        mkdir(outPath);
+    end    
 elseif strcmp(dirID,'analysis_meg_sub')
     if strcmp(subID,'')
         error('Subject ID must be specified!');
