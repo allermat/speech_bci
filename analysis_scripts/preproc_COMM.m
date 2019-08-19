@@ -32,6 +32,7 @@ else
 end
 
 % Loading files specifying parameters
+
 % Trigger definition
 trigDef = generateTrigDef(generateCondDef);
 % Setup specifics
