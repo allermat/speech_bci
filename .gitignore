@@ -32,6 +32,7 @@ parfor_progress.txt
 behavioural_analysis/
 behavioural_data/
 docs/
+EEG_analysis/
 MEG_analysis/
 MEG_data/
 stimuli/
