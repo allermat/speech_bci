@@ -1,14 +1,17 @@
-function preproc_COMM(subID)
-% BCI project MEG preprocessing common stage
+function preproc_COMM(subID,varargin)
+% BCI project MEG/EEG preprocessing common stage
 
 %% Parsing input, checking matlab
+validModalities = {'meg','eeg'};
 p = inputParser;
 
 addRequired(p,'subID',@(x)validateattributes(x,{'char'},{'nonempty'}));
+addOptional(p,'modality','meg',@(x) ismember(x,validModalities))
 
-parse(p,subID);
+parse(p,subID,varargin{:});
 
 subID = p.Results.subID;
+modality = p.Results.modality;
 
 %% Preparing file and directory names for the processing pipeline.
 dataDir = fullfile(BCI_setupdir('analysis_meg_sub',subID),'maxfilter');
@@ -16,9 +19,16 @@ if ~exist(dataDir,'dir')
     error('The specified data folder does not exist!');
 end
 
-analysisDir = fullfile(BCI_setupdir('analysis_meg_sub',subID),'COMM');
-if ~exist(analysisDir,'dir')
-    mkdir(analysisDir);
+if strcmp(modality,'meg')
+    analysisDir = fullfile(BCI_setupdir('analysis_meg_sub',subID),'COMM');
+    if ~exist(analysisDir,'dir')
+        mkdir(analysisDir);
+    end
+else
+    analysisDir = fullfile(BCI_setupdir('analysis_eeg_sub',subID),'COMM');
+    if ~exist(analysisDir,'dir')
+        mkdir(analysisDir);
+    end
 end
 
 % Loading files specifying parameters
@@ -45,8 +55,12 @@ for iFile = 1:size(sourceFileNames,1)
     
     %% Checking if the processed data are already present
     artfResultFileName = sprintf('artf_%srun%d.mat',tag,iFile);
-    megResultFileName = sprintf('ftmeg_%srun%d.mat',tag,iFile);
-    if exist(fullfile(analysisDir,artfResultFileName),'file') && exist(fullfile(analysisDir,megResultFileName),'file')
+    if strcmp(modality,'meg')
+        meegResultFileName = sprintf('ftmeg_%srun%d.mat',tag,iFile);
+    else
+        meegResultFileName = sprintf('fteeg_%srun%d.mat',tag,iFile);
+    end
+    if exist(fullfile(analysisDir,artfResultFileName),'file') && exist(fullfile(analysisDir,meegResultFileName),'file')
         warning('Skipping %s as it has been already processed! ',[sourceFileNames{iFile},'.fif']);
         continue;
     end
@@ -54,7 +68,7 @@ for iFile = 1:size(sourceFileNames,1)
     %% Reading raw data
     cfg = struct();
     cfg.datafile = fullfile(dataDir,[sourceFileNames{iFile},'.fif']);
-    cfg.channel = {'meg'};
+    cfg.channel = {modality};
     ftDataRaw = ft_preprocessing(cfg);
     
     %% High-pass filtering
@@ -67,6 +81,58 @@ for iFile = 1:size(sourceFileNames,1)
     fprintf('\nFILTERING: Highpass filter of order %d, half power frequency %d\n\n',cfg.hpfiltord,cfg.hpfreq);
     ftDataHp = ft_preprocessing(cfg,ftDataRaw);
     
+    if strcmp(modality,'eeg')
+        %% Checking channels visually to reject noisy ones
+        
+        % Coarse visual pass on the data just to check if any channels
+        % should be rejected
+        cfg = struct();
+        cfg.headerfile = fullfile(dataDir,[sourceFileNames{iFile},'.fif']);
+        cfg.trialdef.eventtype = 'Trigger';
+        cfg.trialdef.faketrllength = 600;
+        cfg.trialdef.trigdef = trigDef;
+        megFiles = s.getField(subID,'meg_files');
+        cfg.trialdef.fileSpec = megFiles(ismember(megFiles.fileName,fileNames{iFile}),:);
+        cfg.trialdef.trig_audioonset_corr = setupSpec.trig_audioonset_corr_meg;
+        cfg.trialfun = 'ft_trialfun_artefactdetection';
+        cfg = ft_definetrial(cfg);
+        trlArtf = cfg.trl;
+        
+        % Epoching data for channel check
+        cfg = struct();
+        cfg.trl = trlArtf;
+        ftDataEpArtf = ft_redefinetrial(cfg,ftDataHp);
+        
+%         cfg = struct();
+%         cfg.method = 'trial';
+%         ft_rejectvisual(cfg,ftDataHp);
+        
+        % Inspect data
+        cfg = struct();
+        cfg.viewmode  = 'vertical';
+        cfg.continuous = 'no';
+        cfg.channel = 'all';
+        cfg.fontsize = 5;
+        cfg = ft_databrowser(cfg,ftDataEpArtf); %#ok
+        
+        % Marking bad channels
+        channelsList = ftDataHp.label;
+        selection = listdlg('ListString',channelsList, ...
+            'SelectionMode', 'multiple', 'ListSize', [200 400],...
+            'PromptString','Choose bad channels');
+        if ~isempty(selection)
+            badChannels = channelsList(selection);
+            goodChannels = setdiff(channelsList,badChannels);
+        else
+            badChannels = {};
+            goodChannels = channelsList;
+        end
+        % Rejecting bad channels
+        cfg = struct();
+        cfg.channel = goodChannels;
+        ftDataHp = ft_selectdata(cfg,ftDataHp);
+        
+    end
     %% Artefact detection
     if ~exist(fullfile(analysisDir,artfResultFileName),'file')
         %% Automatic artefact detection
@@ -112,16 +178,41 @@ for iFile = 1:size(sourceFileNames,1)
         [cfg,artefact_muscle] = ft_artifact_zvalue(cfg,ftDataEpArtf); %#ok<ASGLU>
         zval_muscle = cfg.artfctdef.zvalue.cutoff; %#ok<NASGU>
         
+%         if strcmp(modality,'eeg')
+%             % Inspect detected artifacts
+%             cfg = struct();
+%             cfg.viewmode  = 'vertical';
+%             cfg.continuous = 'no';
+%             cfg.channel = 'all';
+%             cfg.artfctdef.muscle.artifact = artefact_muscle;
+%             cfg = ft_databrowser(cfg,ftDataEpArtf);
+%             
+%             ftDataEpArtf = [];
+%             
+%             artefact_muscle = cfg.artfctdef.muscle.artifact; %#ok<NASGU>
+%             artefact_visual = cfg.artfctdef.visual.artifact; %#ok<NASGU>
+%             save(fullfile(analysisDir,artfResultFileName),...
+%                 'artefact_muscle','artefact_visual','badChannels','-v7.3');
+%         end
+        
         %% Saving artefact data
         fprintf('\n\nSaving artefact data...\n\n');
-        save(fullfile(analysisDir,artfResultFileName),...
-            'artefact_muscle','zval_muscle','-v7.3');
-        
+        if strcmp(modality,'eeg')
+            save(fullfile(analysisDir,artfResultFileName),...
+                'artefact_muscle','zval_muscle','badChannels','-v7.3');
+        else
+            save(fullfile(analysisDir,artfResultFileName),...
+                'artefact_muscle','zval_muscle','-v7.3');
+        end
     end
     
-    %% Saving EEG data
-    fprintf('\n\nSaving MEG data...\n\n');
-    save(fullfile(analysisDir,megResultFileName),'ftDataHp','-v7.3');
+    %% Saving MEG/EEG data
+    if strcmp(modality,'meg')
+        fprintf('\n\nSaving MEG data...\n\n');
+    else
+        fprintf('\n\nSaving EEG data...\n\n');
+    end
+    save(fullfile(analysisDir,meegResultFileName),'ftDataHp','-v7.3');
     
     ftDataChanSel = []; %#ok<NASGU>
 end

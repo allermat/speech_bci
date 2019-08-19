@@ -37,8 +37,9 @@ expts = {'';
     };
 
 % Run labels per experiment (not actually needed with new filenames from Pilot2 onwards)
-runs{1} = {'run1' 'run2' 'run3' 'run4' 'run5' 'run6'};
-
+% runs{1} = {'run1' 'run2' 'run3' 'run4' 'run5' 'run6'};
+runs{1} = blocksin{1};
+runsout{1} = blocksout{1};
 % note by es- 'trans_run' variable not actually used in script (even the
 % original version from wiki). So I've edited script to trans runs to first file
 % specified (if 'TransRunFlag' set to 1)
@@ -135,7 +136,8 @@ for g = 1:length(groups)
                     if isempty(raw_file)
                         error('Could not find run %d for grp %s, sub %s, exp %s',r,groups{g},cbu_codes{g}{s},expts{e})
                     else
-                        raw_stem = raw_file.name(1:(end-4));
+                        % raw_stem = raw_file.name(1:(end-4)); % MA edit
+                        raw_stem = runsout{e}{r}; % MA edit
                         raw_file = fullfile(dat_wd,cbu_codes{g}{s},raw_wd,raw_file.name);
                     end
 
@@ -274,7 +276,8 @@ for g = 1:length(groups)
                     if isempty(raw_file)
                         error('Could not find run %d for grp %s, sub %s, exp %s',r,groups{g},cbu_codes{g}{s},expts{e})
                     else
-                        raw_stem = raw_file.name(1:(end-4));
+                        % raw_stem = raw_file.name(1:(end-4)); MA edit
+                        raw_stem = runsout{e}{r};
                         raw_file = fullfile(dat_wd,cbu_codes{g}{s},raw_wd,raw_file.name);
                     end
 

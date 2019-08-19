@@ -32,6 +32,7 @@ trialInfo.wordId = cell(size(trialInfo,1),1);
 trialInfo.wordId(:) = {''};
 % Adding wordID for each stimulus if it isn't present
 conds = condDef.condition(ismember(condDef.stimType,'word'));
+noiseCond = condDef.condition(ismember(condDef.stimType,'noise'));
 for i = 1:numel(conds)
     trialInfo.wordId(trialInfo.condition == conds(i)) = ...
         condDef.wordId(condDef.condition == conds(i));
@@ -84,6 +85,23 @@ for iCond = 1:size(conds,1)
     ftDataAvg = [];
 end
 
+%% All words
+cfg = struct();
+% Selecting good trials belonging to the actual condition
+cfg.trials = ismember(trialInfo.condition,conds) & ... % Only words, no noise
+             trialInfo.badTrials == 0; % Only good data
+ftDataAvg = ft_timelockanalysis(cfg,ftDataClean);
+% Getting rid of unnecesary previous cfgs
+ftDataAvg.cfg.previous = [];
+condTag = 'all_words';
+
+% Saving data
+fprintf('\n\nSaving data...\n\n');
+savePath = fullfile(destDir,['ftmeg_ERP_',subID,'_',condTag,'.mat']);
+save(savePath,'ftDataAvg','-v7.3');
+
+ftDataAvg = [];
+
 %% Target words
 cfg = struct();
 % Selecting good trials belonging to the actual condition
@@ -119,6 +137,41 @@ savePath = fullfile(destDir,['ftmeg_ERP_',subID,'_',condTag,'.mat']);
 save(savePath,'ftDataAvg','-v7.3');
 
 ftDataAvg = [];
+
+%% Non-target words plus noise
+cfg = struct();
+% Selecting good trials belonging to the actual condition
+cfg.trials = ~strcmp(trialInfo.wordId,trialInfo.target) & ... % Only non-target words and noise
+             trialInfo.badTrials == 0; % Only good data
+ftDataAvg = ft_timelockanalysis(cfg,ftDataClean);
+% Getting rid of unnecesary previous cfgs
+ftDataAvg.cfg.previous = [];
+condTag = 'all_nontarg_noise';
+
+% Saving data
+fprintf('\n\nSaving data...\n\n');
+savePath = fullfile(destDir,['ftmeg_ERP_',subID,'_',condTag,'.mat']);
+save(savePath,'ftDataAvg','-v7.3');
+
+ftDataAvg = [];
+
+%% Noise
+cfg = struct();
+% Selecting good trials belonging to the actual condition
+cfg.trials = ismember(trialInfo.condition,noiseCond) & ... % Only noise
+             trialInfo.badTrials == 0; % Only good data
+ftDataAvg = ft_timelockanalysis(cfg,ftDataClean);
+% Getting rid of unnecesary previous cfgs
+ftDataAvg.cfg.previous = [];
+condTag = 'noise';
+
+% Saving data
+fprintf('\n\nSaving data...\n\n');
+savePath = fullfile(destDir,['ftmeg_ERP_',subID,'_',condTag,'.mat']);
+save(savePath,'ftDataAvg','-v7.3');
+
+ftDataAvg = [];
+
 % % Average across all locations
 % cfg = struct();
 % % Selecting good trials belonging to the actual condition

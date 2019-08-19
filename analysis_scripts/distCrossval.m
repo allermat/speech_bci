@@ -1,4 +1,4 @@
-function [result_within,result_between] = distCrossval(data,labels,varargin)
+function [result_all,result_within,result_between] = distCrossval(data,labels,varargin)
 
 validDistMeasures = {'squaredeucledian','pearson'};
 
@@ -21,6 +21,15 @@ poolOverTime = p.Results.poolOverTime;
 
 result_within = withinClassCrossVal(data,labels,distMeasure,doNoiseNorm,poolOverTime);
 result_between = betweenClassCrossVal(data,labels,'leaveOneOut',distMeasure,doNoiseNorm,poolOverTime);
+
+% Merging the 
+result_all = result_between;
+for i = 1:size(result_within,3)
+    temp = result_all(:,:,i);
+    temp = triu(temp)+triu(temp)';
+    temp(logical(eye(size(temp)))) = diag(result_within(:,:,i));
+    result_all(:,:,i) = temp;
+end
 
 end
 
