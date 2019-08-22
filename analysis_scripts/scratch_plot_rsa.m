@@ -2,8 +2,8 @@
 if strcmp(analysis,'noise')
     % Plotting noise
     if poolOverTime
-        tickLabels = condDef.wordId(ismember(condDef.condition,conditions));
-        plotRDM(distAll,tickLabels,3);
+        tickLabels = condDef.wordId(ismember(condDef.wordId,targets));
+        plotRDM(distAll,tickLabels,[]);
         title(sprintf('Decoding target word from noise\npooled over time'));
     else
         % Time resolved figure
@@ -22,11 +22,13 @@ if strcmp(analysis,'noise')
         plotRDM(mean(distAll,3),tickLabels,[]);
         title(sprintf('Decoding target word from noise\nmean across time'));
     end
-else
+elseif strcmp(analysis,'words')
     % Plotting words
     if poolOverTime
-        tickLabels = condDef.wordId(ismember(condDef.condition,conditions));
-        plotRDM(distAll,tickLabels,3);
+        temp = cellfun(@(x) upper(condDef.wordId{condDef.condition == x}(1)),...
+                       table2cell(conditions),'UniformOutput',false);
+        tickLabels = strcat(temp(:,1),'\_',temp(:,2));
+        plotRDM(distAll,tickLabels,[]);
         title(sprintf('Decoding presented word\npooled over time'));
     else
         % Time resolved figure
@@ -45,6 +47,35 @@ else
                        table2cell(conditions),'UniformOutput',false);
         tickLabels = strcat(temp(:,1),'\_',temp(:,2));
         plotRDM(mean(distAll,3),tickLabels,3);
+        title(sprintf('Decoding presented word\nmean across time'));
+    end
+elseif strcmp(analysis,'all')
+    % Plotting words
+    if poolOverTime
+        temp = cellfun(@(x) upper(condDef.wordId{condDef.condition == x}(1)),...
+                       table2cell(conditions),'UniformOutput',false);
+        tickLabels = strcat(temp(:,1),'\_',temp(:,2));
+        plotRDM(distAll,tickLabels,[]);
+        title(sprintf('Decoding presented word\npooled over time'));
+    else
+        % Time resolved figure
+        figure;
+        hold on;
+        plot(-100:4:500, squeeze(nanmean(nanmean(distBetween, 1), 2)), 'linewidth', 2);
+        plot(-100:4:500, squeeze(nanmean(nanmean(distWithin, 1), 2)), 'linewidth', 2);
+        xlim([-100 500]);
+        xlabel('Time [ms]');
+        ylabel('Crossnobis distance');
+        legend('Between', 'Within', 'location', 'NorthWest');
+        title(sprintf('Decoding presented word\ntime resolved'));
+
+        % RDM figure
+        wordId = condDef.wordId;
+        wordId{end} = 'z';
+        temp = cellfun(@(x) upper(wordId{condDef.condition == x}(1)),...
+                       table2cell(conditions),'UniformOutput',false);
+        tickLabels = strcat(temp(:,1),'\_',temp(:,2));
+        plotRDM(mean(distAll,3),tickLabels,4);
         title(sprintf('Decoding presented word\nmean across time'));
     end
 end

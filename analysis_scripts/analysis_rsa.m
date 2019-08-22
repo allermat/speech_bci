@@ -1,7 +1,7 @@
 function analysis_rsa(subID,varargin)
 % Compute dissimilarity measures on MEG data
 
-validAnalyses = {'words','noise'};
+validAnalyses = {'words','noise','all'};
 
 p = inputParser;
 
@@ -41,64 +41,79 @@ trialInfo.targetNum = rowfun(@(x) condDef.condition(condDef.wordId == x),...
                              'OutputFormat','Uniform');
 trialInfo.idx = (1:size(trialInfo,1))';
 
-if strcmp(analysis,'noise')
-    targetIdx = varfun(@(x) x,trialInfo(trialInfo.condition == 4,:),...
-                  'InputVariables',{'idx'},'GroupingVariables',...
-                  {'iRun','iTrialInRun','target'});
-    targets = unique(trialInfo.target);
-    % Making sure targets are ordered the same as the condition labels
-    [lia,locb]= ismember(condDef.wordId,targets);
-    targets = targets(locb(lia));
-    data = {};
-    labels = [];
-    for iTarget = 1:numel(targets)
-        uniqueTrials = unique(targetIdx(targetIdx.target == targets(iTarget),{'iRun','iTrialInRun'}),'rows');
-        tempData = cell(size(uniqueTrials,1),1);
-        tempCond = NaN(size(uniqueTrials,1),1);
-        for iTrial = 1:size(uniqueTrials,1)
-            actSelection = targetIdx.Fun_idx(ismember(targetIdx(:,{'iRun','iTrialInRun'}), ...
-                                                      uniqueTrials(iTrial,:)));
-            temp = megData(actSelection);
-            tempData{iTrial} = mean(cat(3,temp{:}),3);
-            tempCond(iTrial) = condDef.condition(condDef.wordId == targets(iTarget));
-        end
-        data = cat(1,data,tempData);
-        labels = cat(1,labels,tempCond);
-    end
-    data = shiftdim(cat(3,data{:}),2);
-    
-    [distAll,distWithin,distBetween] = distCrossval(data,labels,'doNoiseNorm',true,...
-                                            'poolOverTime',poolOverTime);
-    
-else
-    
-    condIdx = varfun(@(x) x,trialInfo(ismember(trialInfo.condition,[1,2,3]),:),...
-                     'InputVariables',{'idx'},'GroupingVariables',...
-                     {'iRun','targetNum','condition'});
-    conditions = unique(condIdx(:,{'targetNum','condition'}),'rows');
-    nTrialPerCond = numel(unique(condIdx.iRun));
-    data = {};
-    labels = [];
-    for iCond = 1:size(conditions,1)
-        tempData = cell(nTrialPerCond,1);
-        tempCond = NaN(nTrialPerCond,1);
-        for iTrial = 1:nTrialPerCond
-            actSelection = ...
-                condIdx.Fun_idx(condIdx.iRun == iTrial & ...
-                                condIdx.targetNum == conditions.targetNum(iCond) & ...
-                                condIdx.condition == conditions.condition(iCond));
-            temp = megData(actSelection);
-            tempData{iTrial} = mean(cat(3,temp{:}),3);
-            tempCond(iTrial) = iCond;
-        end
-        data = cat(1,data,tempData);
-        labels = cat(1,labels,tempCond);
-    end
-    data = shiftdim(cat(3,data{:}),2);
-    
-    [distAll,distWithin,distBetween] = distCrossval(data,labels,'doNoiseNorm',true,...
-                                            'poolOverTime',poolOverTime);
+% if strcmp(analysis,'noise')
+%     
+%     targetIdx = varfun(@(x) x,trialInfo(trialInfo.condition == 4,:),...
+%                   'InputVariables',{'idx'},'GroupingVariables',...
+%                   {'iRun','iTrialInRun','target'});
+%     targets = unique(trialInfo.target);
+%     % Making sure targets are ordered the same as the condition labels
+%     [lia,locb]= ismember(condDef.wordId,targets);
+%     targets = targets(locb(lia));
+%     data = {};
+%     labels = [];
+%     for iTarget = 1:numel(targets)
+%         uniqueTrials = unique(targetIdx(targetIdx.target == targets(iTarget),{'iRun','iTrialInRun'}),'rows');
+%         tempData = cell(size(uniqueTrials,1),1);
+%         tempCond = NaN(size(uniqueTrials,1),1);
+%         for iTrial = 1:size(uniqueTrials,1)
+%             actSelection = targetIdx.Fun_idx(ismember(targetIdx(:,{'iRun','iTrialInRun'}), ...
+%                                                       uniqueTrials(iTrial,:)));
+%             temp = megData(actSelection);
+%             tempData{iTrial} = mean(cat(3,temp{:}),3);
+%             tempCond(iTrial) = condDef.condition(condDef.wordId == targets(iTarget));
+%         end
+%         data = cat(1,data,tempData);
+%         labels = cat(1,labels,tempCond);
+%     end
+%     data = shiftdim(cat(3,data{:}),2);
+%     
+%     [distAll,distWithin,distBetween] = distCrossval(data,labels,'doNoiseNorm',true,...
+%                                             'poolOverTime',poolOverTime);
+%     
+% else
+%     
+%     
+% end
+
+switch analysis
+    case 'noise'
+        condSelection = 4;
+    case 'words'
+        condSelection = [1,2,3];
+    case 'all'
+        condSelection = [1,2,3,4];
 end
+
+stimIdx = varfun(@(x) x,trialInfo(ismember(trialInfo.condition,condSelection),:),...
+    'InputVariables',{'idx'},'GroupingVariables',...
+    {'iRun','iTrialInRun','targetNum','condition'});
+conditions = unique(stimIdx(:,{'targetNum','condition'}),'rows');
+if strcmp(analysis,'all')
+    conditions = sortrows(conditions,{'condition','targetNum'});
+end
+data = {};
+labels = [];
+for iCond = 1:size(conditions,1)
+    actCondIdx = ismember(stimIdx(:,{'targetNum','condition'}),conditions(iCond,:));
+    uniqueTrials = unique(stimIdx(actCondIdx,{'iRun','iTrialInRun'}),'rows');
+    tempData = cell(size(uniqueTrials,1),1);
+    tempCond = NaN(size(uniqueTrials,1),1);
+    for iTrial = 1:size(uniqueTrials,1)
+        actSelection = stimIdx.Fun_idx(actCondIdx & ...
+            ismember(stimIdx(:,{'iRun','iTrialInRun'}),...
+            uniqueTrials(iTrial,:)));
+        temp = megData(actSelection);
+        tempData{iTrial} = mean(cat(3,temp{:}),3);
+        tempCond(iTrial) = iCond;
+    end
+    data = cat(1,data,tempData);
+    labels = cat(1,labels,tempCond);
+end
+data = shiftdim(cat(3,data{:}),2);
+
+[distAll,distWithin,distBetween] = distCrossval(data,labels,'doNoiseNorm',true,...
+    'poolOverTime',poolOverTime);
 
 if poolOverTime
     fileName = sprintf('%s_time-pooled_chan-%s.mat',analysis,channel);
