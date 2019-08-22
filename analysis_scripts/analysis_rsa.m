@@ -109,6 +109,8 @@ end
 % Clearing variables before saving
 clearvars ftData megData varargin p
 % Saving data
-save(fullfile(BCI_setupdir('analysis_meg_sub_mvpa',subID),'RSA',fileName),'-v7.3');
+destDir = fullfile(BCI_setupdir('analysis_meg_sub_mvpa',subID),'RSA');
+if ~exist(destDir,'dir'), mkdir(destDir); end
+save(fullfile(destDir,fileName),'-v7.3');
 
 end

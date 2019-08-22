@@ -291,7 +291,9 @@ for g = 1:length(groups)
                     else
                         %% Fit sphere (since better than MaxFilter does)
                         if r == 1  % fit sphere doesn't change with run!
-                            incEEG = 0;
+                            % if headpoints are missing use EEG
+                            % incEEG = 0;
+                            incEEG = 1;
                             if exist(fullfile(sub_wd,'fittmp.txt')); delete(fullfile(sub_wd,'fittmp.txt')); end
                             if exist(fullfile(sub_wd,sprintf('run_%02d_hpi.txt',r))); delete(fullfile(sub_wd,sprintf('run_%02d_hpi.txt',r)));  end
                             [orig,rad,fit] = meg_fit_sphere(raw_file,sub_wd,sprintf('%s_hpi.txt',raw_stem),incEEG);

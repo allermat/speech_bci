@@ -2,21 +2,29 @@ function preproc_MVPA(subID,varargin)
 %% Parsing input, checking matlab
 p = inputParser;
 
+validModalities = {'meg','eeg'};
 validModes = {'compICA','rejectICcomp'};
 
 addRequired(p,'subID',@(x)validateattributes(x,{'char'},{'nonempty'}));
+addParameter(p,'modality','meg',@(x) ismember(x,validModalities))
 addParameter(p,'runMode','compICA',@(x) ismember(x,validModes));
 
 parse(p,subID,varargin{:});
 
 subID = p.Results.subID;
+modality = p.Results.modality;
 runMode = p.Results.runMode;
 
 %% Preparing file and directory names for the processing pipeline.
 maxfilterDir = fullfile(BCI_setupdir('analysis_meg_sub',subID),'maxfilter');
-sourceDir = fullfile(BCI_setupdir('analysis_meg_sub',subID),'COMM');
 behavSourceDir = BCI_setupdir('data_behav_sub',subID);
-destDir = BCI_setupdir('analysis_meg_sub_mvpa_preproc',subID);
+if strcmp(modality,'meg')
+    sourceDir = fullfile(BCI_setupdir('analysis_meg_sub',subID),'COMM');
+    destDir = BCI_setupdir('analysis_meg_sub_mvpa_preproc',subID);
+else
+    sourceDir = fullfile(BCI_setupdir('analysis_eeg_sub',subID),'COMM');
+    destDir = BCI_setupdir('analysis_eeg_sub_mvpa_preproc',subID);
+end
 
 % Subject specifics
 s = subjSpec;
@@ -37,12 +45,18 @@ setupSpec = setupSpec(ismember({setupSpec.description},'presentation'));
 
 if strcmp(runMode,'compICA')
     % Getting eeg source file names' list
-    sourceFileNames = strcat('ftmeg_COMM_',dataFileNames,'.mat');
+    if strcmp(modality,'meg')
+        sourceFileNames = strcat('ftmeg_COMM_',dataFileNames,'.mat');
+        matchStr = '^ftmeg_COMM_';
+    else
+        sourceFileNames = strcat('fteeg_COMM_',dataFileNames,'.mat');
+        matchStr = '^fteeg_COMM_';
+    end
     % Checking if the required files are available
     listing = dir(sourceDir);
     fileNames = {listing.name}';
     sourceFileNamesPresent = ...
-        fileNames(~cellfun(@isempty,regexp(fileNames,'^ftmeg_COMM_','once')));
+        fileNames(~cellfun(@isempty,regexp(fileNames,matchStr,'once')));
     if any(~ismember(sourceFileNames,sourceFileNamesPresent))
         error('The specified source files are not found');
     end
@@ -71,8 +85,13 @@ if strcmp(runMode,'compICA')
 end
 
 % Checking for existing result files, in which case the day is skipped
-icaFileName = fullfile(destDir,['ftmeg_ICA_',subID,'.mat']);
-resultFileName = fullfile(destDir,['ftmeg_MVPA_',subID,'.mat']);
+if strcmp(modality,'meg')
+    icaFileName = fullfile(destDir,['ftmeg_ICA_',subID,'.mat']);
+    resultFileName = fullfile(destDir,['ftmeg_MVPA_',subID,'.mat']);
+else
+    icaFileName = fullfile(destDir,['fteeg_ICA_',subID,'.mat']);
+    resultFileName = fullfile(destDir,['fteeg_MVPA_',subID,'.mat']);
+end
 if strcmp(runMode,'compICA') && exist(icaFileName,'file')
     warning('ICA has already been computed, returning! ');
     return;
@@ -177,6 +196,25 @@ if strcmp(runMode,'compICA')
     
     %% Merging files for the same day if necessary
     if numel(resultFiles) > 1
+        if strcmp(modality,'eeg')
+            % First making sure that all files contain the same channels in
+            % EEG. In MEG maxfilter rejects and interpolates bad channels,
+            % so this is not necessary. 
+            badChannels = cellfun(@load,...
+                fullfile(sourceDir,artefactFileNames),...
+                repmat({'badChannels'},size(artefactFileNames)));
+            badChannels = unique(cat(1,badChannels.badChannels));
+            
+            % Rejecting all bad channels marked in either files so that
+            % all files contain the same channels
+            for i = 1:numel(resultFiles)
+                cfg = struct();
+                cfg.channel = setdiff(resultFiles{i}.label,badChannels);
+                resultFiles{i} = ft_selectdata(cfg,resultFiles{i});
+            end
+        else
+            badChannels = {};
+        end
         ftDataMerged = ft_appenddata([],resultFiles{:});
     else
         ftDataMerged = resultFiles{1}; %#ok<*NASGU>
@@ -187,15 +225,19 @@ if strcmp(runMode,'compICA')
     %% ICA for blink correction
     
     % Do ICA separately for the two modalities
-    modality = {'megmag','megplanar'};
-    ftData_IC = cell(size(modality));
-    for iMod = 1:numel(modality)
+    if strcmp(modality,'meg')
+        modality_ica = {'megmag','megplanar'};
+    else
+        modality_ica = {modality};
+    end
+    ftData_IC = cell(size(modality_ica));
+    for iMod = 1:numel(modality_ica)
         
         % ICA finds tons of slow wave components, so I should high pass
         % filter the data at higher frequency (1 Hz) before starting it the
         % unmixing marix can then also be applied to the original data
         cfg = struct();
-        cfg.channel = modality{iMod};
+        cfg.channel = modality_ica{iMod};
         cfg.hpfilter = 'yes';
         cfg.hpfreq = 1;
         cfg.hpfiltord = 4;
@@ -217,8 +259,8 @@ if strcmp(runMode,'compICA')
     end
     % Save IC data
     fprintf('\n\nSaving ICA data...\n\n');
-    save(icaFileName,'ftData_IC','ftDataMerged','modality',...
-        'ica_randseed','-v7.3');
+    save(icaFileName,'ftData_IC','ftDataMerged','modality_ica',...
+        'ica_randseed','badChannels','-v7.3');
 else
     
     if ~exist(icaFileName,'file')
@@ -229,20 +271,33 @@ else
     fLoaded = load(icaFileName);
     ftData_IC = fLoaded.ftData_IC;
     ftDataMerged = fLoaded.ftDataMerged;
-    modality = fLoaded.modality;
+    if isfield(fLoaded,'modality_ica')
+        modality_ica = fLoaded.modality_ica;
+    else
+        % For backward compatibility
+        modality_ica = fLoaded.modality;
+    end
     
-    ftDataClean = cell(size(modality));
-    for iMod = 1:numel(modality)
+    ftDataClean = cell(size(modality_ica));
+    for iMod = 1:numel(modality_ica)
         
         % inspect independent components (determine artifacts)
         cfg = struct();
         cfg.viewmode = 'component';
-        cfg.layout = 'neuromag306all';
         cfg.continuous = 'yes';
         cfg.blocksize = 20;
         cfg.channel = 1:16;
-        
-        cfg = ft_databrowser(cfg, ftData_IC{iMod});
+        if strcmp(modality,'meg')
+            cfg.layout = 'neuromag306all';
+            cfg = ft_databrowser(cfg, ftData_IC{iMod});
+        else
+            % cfg.layout = 'easycapCBU';
+            % cfg.layout = 'natmeg_customized_eeg1005';
+            % This is a workaround as I don't have the CBU specific layout
+            % file. 
+            cfg.elec = ftDataMerged.elec;
+            cfg = ft_databrowser(cfg, rmfield(ftData_IC{iMod},'grad'));
+        end
         
         % Reject ICA components
         prompt = {'ICA components to be rejected (e.g. [1, 2, 3])'};
@@ -253,7 +308,7 @@ else
         
         % Select actual channel modality from original data
         cfg = struct();
-        cfg.channel = modality{iMod};
+        cfg.channel = modality_ica{iMod};
         ftDataOrig = ft_selectdata(cfg,ftDataMerged);
         
         % Decompose the original data using the computed unmixing matrix
@@ -269,7 +324,11 @@ else
     end
     
     % Merge data across modalities
-    ftDataClean = ft_appenddata([],ftDataClean{:});
+    if numel(ftDataClean) > 1
+        ftDataClean = ft_appenddata([],ftDataClean{:});
+    else
+        ftDataClean = ftDataClean{1};
+    end
     
     %% Baseline correction
     cfg = struct();
@@ -277,8 +336,35 @@ else
     cfg.baselinewindow = [-0.1,0];
     ftDataClean = ft_preprocessing(cfg,ftDataClean);
     
+    %% Interpolate bad channels and average reference in case of EEG
+    if strcmp(modality,'eeg')
+        
+        % If the grad field is still present, remove it
+        if isfield(ftDataClean,'grad')
+            ftDataClean = rmfield(ftDataClean,'grad');
+        end
+        % Interpolate bad channels
+        if ~isempty(fLoaded.badChannels)
+            cfg = struct();
+            cfg.method = 'spline';
+            cfg.badchannel = fLoaded.badChannels;            
+            ftDataClean = ft_channelrepair(cfg,ftDataClean);
+        end
+        
+        % Re-referencing to average reference
+        cfg = struct();
+        cfg.reref = 'yes';
+        cfg.refchannel = 'all';
+        ftDataClean = ft_preprocessing(cfg,ftDataClean);
+        
+    end
+    
     %% Saving data
-    fprintf('\n\nSaving MEG data...\n\n');
+    if strcmp(modality,'meg')
+        fprintf('\n\nSaving MEG data...\n\n');
+    else
+        fprintf('\n\nSaving EEG data...\n\n');
+    end
     save(resultFileName,'ftDataClean','-v7.3');
     
     ftDataClean = [];

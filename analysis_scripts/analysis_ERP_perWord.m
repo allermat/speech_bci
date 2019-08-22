@@ -1,22 +1,33 @@
-function analysis_ERP_perWord(subID)
+function analysis_ERP_perWord(subID,varargin)
 %% Parsing input, checking matlab
 p = inputParser;
 
+validModalities = {'meg','eeg'};
+
 addRequired(p,'subID',@(x)validateattributes(x,{'char'},{'nonempty'}));
-        
-parse(p,subID);
+addOptional(p,'modality','meg',@(x) ismember(x,validModalities));
+
+parse(p,subID,varargin{:});
 
 subID = p.Results.subID;
+modality = p.Results.modality;
 
 %% Preparing file and directory names for the processing pipeline.
-sourceDir = fullfile(BCI_setupdir('analysis_meg_sub_mvpa_preproc',subID));
-destDir = BCI_setupdir('analysis_meg_sub_erp',subID);
-
+if strcmp(modality,'meg')
+    sourceDir = fullfile(BCI_setupdir('analysis_meg_sub_mvpa_preproc',subID));
+    destDir = BCI_setupdir('analysis_meg_sub_erp',subID);
+    matchStr = ['ftmeg_MVPA_',subID,'.mat'];
+    fileStem = 'ftmeg_ERP_';
+else
+    sourceDir = fullfile(BCI_setupdir('analysis_eeg_sub_mvpa_preproc',subID));
+    destDir = BCI_setupdir('analysis_eeg_sub_erp',subID);
+    matchStr = ['fteeg_MVPA_',subID,'.mat'];
+    fileStem = 'fteeg_ERP_';
+end
 % Loading files specifying parameters
 condDef = generateCondDef;
 
 % Getting eeg source file names' list
-matchStr = ['ftmeg_MVPA_',subID,'.mat'];
 listing = dir(sourceDir);
 fileNames = {listing.name}';
 fileNames = fileNames(~cellfun(@isempty,regexp(fileNames,matchStr,'once')));
@@ -61,7 +72,7 @@ for iCond = 1:size(conds,1)
     
     % Saving data
     fprintf('\n\nSaving data...\n\n');
-    savePath = fullfile(destDir,['ftmeg_ERP_',subID,'_',condTag,'.mat']);
+    savePath = fullfile(destDir,[fileStem,subID,'_',condTag,'.mat']);
     save(savePath,'ftDataAvg','-v7.3');
     
     ftDataAvg = [];
@@ -79,7 +90,7 @@ for iCond = 1:size(conds,1)
     
     % Saving data
     fprintf('\n\nSaving data...\n\n');
-    savePath = fullfile(destDir,['ftmeg_ERP_',subID,'_',condTag,'.mat']);
+    savePath = fullfile(destDir,[fileStem,subID,'_',condTag,'.mat']);
     save(savePath,'ftDataAvg','-v7.3');
     
     ftDataAvg = [];
@@ -97,7 +108,7 @@ condTag = 'all_words';
 
 % Saving data
 fprintf('\n\nSaving data...\n\n');
-savePath = fullfile(destDir,['ftmeg_ERP_',subID,'_',condTag,'.mat']);
+savePath = fullfile(destDir,[fileStem,subID,'_',condTag,'.mat']);
 save(savePath,'ftDataAvg','-v7.3');
 
 ftDataAvg = [];
@@ -115,7 +126,7 @@ condTag = 'all_targ';
 
 % Saving data
 fprintf('\n\nSaving data...\n\n');
-savePath = fullfile(destDir,['ftmeg_ERP_',subID,'_',condTag,'.mat']);
+savePath = fullfile(destDir,[fileStem,subID,'_',condTag,'.mat']);
 save(savePath,'ftDataAvg','-v7.3');
 
 ftDataAvg = [];
@@ -133,7 +144,7 @@ condTag = 'all_nontarg';
 
 % Saving data
 fprintf('\n\nSaving data...\n\n');
-savePath = fullfile(destDir,['ftmeg_ERP_',subID,'_',condTag,'.mat']);
+savePath = fullfile(destDir,[fileStem,subID,'_',condTag,'.mat']);
 save(savePath,'ftDataAvg','-v7.3');
 
 ftDataAvg = [];
@@ -150,7 +161,7 @@ condTag = 'all_nontarg_noise';
 
 % Saving data
 fprintf('\n\nSaving data...\n\n');
-savePath = fullfile(destDir,['ftmeg_ERP_',subID,'_',condTag,'.mat']);
+savePath = fullfile(destDir,[fileStem,subID,'_',condTag,'.mat']);
 save(savePath,'ftDataAvg','-v7.3');
 
 ftDataAvg = [];
@@ -167,7 +178,7 @@ condTag = 'noise';
 
 % Saving data
 fprintf('\n\nSaving data...\n\n');
-savePath = fullfile(destDir,['ftmeg_ERP_',subID,'_',condTag,'.mat']);
+savePath = fullfile(destDir,[fileStem,subID,'_',condTag,'.mat']);
 save(savePath,'ftDataAvg','-v7.3');
 
 ftDataAvg = [];

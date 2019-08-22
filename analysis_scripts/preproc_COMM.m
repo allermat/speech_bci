@@ -6,7 +6,7 @@ validModalities = {'meg','eeg'};
 p = inputParser;
 
 addRequired(p,'subID',@(x)validateattributes(x,{'char'},{'nonempty'}));
-addOptional(p,'modality','meg',@(x) ismember(x,validModalities))
+addOptional(p,'modality','meg',@(x) ismember(x,validModalities));
 
 parse(p,subID,varargin{:});
 

@@ -1,6 +1,7 @@
 clearvars; 
 % Defining parameters
-subID = {'meg19_0239','meg19_0251'};
+% subID = {'meg19_0239','meg19_0251'};
+subID = {'meg19_0233'};
 analysis = {'noise','words'};
 channel = {'all','megplanar'};
 poolOverTime = [false,true];
@@ -10,7 +11,7 @@ for iSub = 1:numel(subID)
                   sprintf('ftmeg_MVPA_%s.mat',subID{iSub})));
     ftData = ftData.ftDataClean;
     
-    for iAnal = 1:numel(analysis)
+    for iAnal = 2:numel(analysis)
         for iChan = 1:numel(channel)
             for iPool = 1:numel(poolOverTime)
                 analysis_rsa(subID{iSub},...
