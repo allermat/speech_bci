@@ -1,0 +1,18 @@
+Speech-BCI Analysis Notes
+=========================
+
+Notes by subject
+----------------
+
+	meg19_0233
+		Data Collection
+			- Only 5 runs were collected
+			- No headpoints and the 70th EEG channel were not digitized during preparation
+			- Bug in the script prevented automatic saving of behavioural data, so I had to 
+				do it manually which means they need further pre-processing. 
+		Pre-processing
+			- EEG: rejected channels were not interpolated because of missing
+				channel position and montage. Once I have a montage I can interpolated
+			- MEG: no issues
+		
+	meg19_0239

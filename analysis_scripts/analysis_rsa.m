@@ -2,14 +2,14 @@ function analysis_rsa(subID,varargin)
 % Compute dissimilarity measures on MEG data
 
 validAnalyses = {'words','noise','all'};
-
+validTimeModes = {'resolved','pooled','movingWin'};
 p = inputParser;
 
 addRequired(p,'subID',@(x) validateattributes(x,{'char'},{'nonempty'}));
 addParameter(p,'ftData',struct([]),@isstruct);
 addParameter(p,'analysis','words',@(x) ismember(x,validAnalyses));
 addParameter(p,'channel','all',@(x) validateattributes(x,{'char'},{'nonempty'}));
-addParameter(p,'poolOverTime',false,@(x) validateattributes(x,{'logical'},{'scalar'}));
+addParameter(p,'timeMode',@(x) ismember(x,validTimeModes));
 
 parse(p,subID,varargin{:});
 
@@ -17,7 +17,7 @@ subID = p.Results.subID;
 ftData = p.Results.ftData;
 analysis = p.Results.analysis;
 channel = p.Results.channel;
-poolOverTime = p.Results.poolOverTime;
+timeMode = p.Results.timeMode;
 
 % Loading data if necessary
 if isempty(ftData)
@@ -26,7 +26,7 @@ if isempty(ftData)
     ftData = ftData.ftDataClean;
 end
 
-% Select channels to be used
+% Select channels
 cfg = struct();
 cfg.channel = channel;
 ftData = ft_selectdata(cfg,ftData);
@@ -40,41 +40,6 @@ trialInfo.targetNum = rowfun(@(x) condDef.condition(condDef.wordId == x),...
                              trialInfo,'InputVariables',{'target'},...
                              'OutputFormat','Uniform');
 trialInfo.idx = (1:size(trialInfo,1))';
-
-% if strcmp(analysis,'noise')
-%     
-%     targetIdx = varfun(@(x) x,trialInfo(trialInfo.condition == 4,:),...
-%                   'InputVariables',{'idx'},'GroupingVariables',...
-%                   {'iRun','iTrialInRun','target'});
-%     targets = unique(trialInfo.target);
-%     % Making sure targets are ordered the same as the condition labels
-%     [lia,locb]= ismember(condDef.wordId,targets);
-%     targets = targets(locb(lia));
-%     data = {};
-%     labels = [];
-%     for iTarget = 1:numel(targets)
-%         uniqueTrials = unique(targetIdx(targetIdx.target == targets(iTarget),{'iRun','iTrialInRun'}),'rows');
-%         tempData = cell(size(uniqueTrials,1),1);
-%         tempCond = NaN(size(uniqueTrials,1),1);
-%         for iTrial = 1:size(uniqueTrials,1)
-%             actSelection = targetIdx.Fun_idx(ismember(targetIdx(:,{'iRun','iTrialInRun'}), ...
-%                                                       uniqueTrials(iTrial,:)));
-%             temp = megData(actSelection);
-%             tempData{iTrial} = mean(cat(3,temp{:}),3);
-%             tempCond(iTrial) = condDef.condition(condDef.wordId == targets(iTarget));
-%         end
-%         data = cat(1,data,tempData);
-%         labels = cat(1,labels,tempCond);
-%     end
-%     data = shiftdim(cat(3,data{:}),2);
-%     
-%     [distAll,distWithin,distBetween] = distCrossval(data,labels,'doNoiseNorm',true,...
-%                                             'poolOverTime',poolOverTime);
-%     
-% else
-%     
-%     
-% end
 
 switch analysis
     case 'noise'
@@ -112,20 +77,33 @@ for iCond = 1:size(conditions,1)
 end
 data = shiftdim(cat(3,data{:}),2);
 
-[distAll,distWithin,distBetween] = distCrossval(data,labels,'doNoiseNorm',true,...
-    'poolOverTime',poolOverTime);
-
-if poolOverTime
-    fileName = sprintf('%s_time-pooled_chan-%s.mat',analysis,channel);
-else
-    fileName = sprintf('%s_time-resolved_chan-%s.mat',analysis,channel);
+switch timeMode
+    case 'pooled'
+        timeIdx = {1:numel(ftData.time{1})};
+        timeLabel = []; %#ok<*NASGU>
+    case 'resolved'
+        timeIdx = num2cell(1:numel(ftData.time{1}));
+        timeLabel = ftData.time{1}.*1000;
+    case 'movingWin'
+        t = cellfun(@plus,num2cell(-50:4:500),...
+                    repmat({-50:4:0},1,size(-50:4:500,2)),...
+                    'UniformOutput',false);
+        timeIdx = cellfun(@(x) find(ismembertol(ftData.time{1},x./1000)),...
+                          t,'UniformOutput',false);
+        timeLabel = cellfun(@max,t);
 end
+
+[distAll,distWithin,distBetween] = distCrossval(data,labels,'doNoiseNorm',true,...
+    'timeIdx',timeIdx); %#ok<ASGLU>
 
 % Clearing variables before saving
 clearvars ftData megData varargin p
 % Saving data
+fileName = sprintf('%s_time-%s_chan-%s.mat',analysis,timeMode,channel);
 destDir = fullfile(BCI_setupdir('analysis_meg_sub_mvpa',subID),'RSA');
 if ~exist(destDir,'dir'), mkdir(destDir); end
-save(fullfile(destDir,fileName),'-v7.3');
+save(fullfile(destDir,fileName),'analysis','channel','condDef',...
+    'conditions','condSelection','distAll','distBetween','distWithin',...
+    'timeLabel','timeMode','-v7.3');
 
 end

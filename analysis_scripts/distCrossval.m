@@ -1,7 +1,9 @@
 function [result_all,result_within,result_between] = distCrossval(data,labels,varargin)
 
 validDistMeasures = {'squaredeucledian','pearson'};
-
+% Each index in the cell array must be a valid index of the time (3rd)
+% dimension of the data
+checkTimeIdx = @(x) all(cellfun(@(y) all(ismember(y,1:size(data,3))),x));
 p = inputParser;
 
 addRequired(p,'data',@(x) validateattributes(x,{'numeric'},{'finite'}));
@@ -9,7 +11,7 @@ addRequired(p,'labels',@(x) validateattributes(x,{'numeric'}, ...
             {'finite','size',[size(data,1),1]}));
 addParameter(p,'distMeasure','squaredeucledian',@(x) ismember(x,validDistMeasures));
 addParameter(p,'doNoiseNorm',true,@(x) validateattributes(x,{'logical'},{'scalar'}));
-addParameter(p,'poolOverTime',false,@(x) validateattributes(x,{'logical'},{'scalar'}));
+addParameter(p,'timeIdx',num2cell(1:size(data,3)),checkTimeIdx);
 
 parse(p,data,labels,varargin{:});
 
@@ -17,10 +19,10 @@ data = p.Results.data;
 labels = p.Results.labels;
 distMeasure = p.Results.distMeasure;
 doNoiseNorm = p.Results.doNoiseNorm;
-poolOverTime = p.Results.poolOverTime;
+timeIdx = p.Results.timeIdx;
 
-result_within = withinClassCrossVal(data,labels,distMeasure,doNoiseNorm,poolOverTime);
-result_between = betweenClassCrossVal(data,labels,'leaveOneOut',distMeasure,doNoiseNorm,poolOverTime);
+result_within = withinClassCrossVal(data,labels,distMeasure,doNoiseNorm,timeIdx);
+result_between = betweenClassCrossVal(data,labels,'leaveOneOut',distMeasure,doNoiseNorm,timeIdx);
 
 % Merging the 
 result_all = result_between;
@@ -33,7 +35,7 @@ end
 
 end
 
-function result_cv = withinClassCrossVal(data,labels,distMeasure,doNoiseNorm,poolOverTime)
+function result_cv = withinClassCrossVal(data,labels,distMeasure,doNoiseNorm,timeIdx)
 % Computes within class crossvalidated distance measure
 
 n_trials = histcounts(labels,'BinMethod','integers');
@@ -54,9 +56,7 @@ permIdx = mod(permIdx,n_perm);
 permIdx(permIdx == 0) = n_perm;
 
 n_time_orig = n_time;
-if poolOverTime
-    n_time = 1;
-end
+n_time = numel(timeIdx);
 
 result_cv = nan(n_perm, n_conditions, n_conditions, n_time);
 
@@ -87,11 +87,21 @@ for iPerm = 1:n_perm
         end
     end
     
-    if poolOverTime
-        s_train = size(data_train);
-        data_train = reshape(data_train,s_train(1),s_train(2)*s_train(3));
-        s_test = size(data_test);
-        data_test = reshape(data_test,s_test(1),s_test(2)*s_train(3));
+    % Reshaping time dimension if necessary
+    if any(cellfun(@numel,timeIdx) > 1)
+        [data_train_temp,data_test_temp] = deal(cell(n_time,1));
+        for iTime = 1:n_time
+            temp = data_train(:,:,timeIdx{iTime});
+            s = size(temp);
+            data_train_temp{iTime} = reshape(temp,s(1),s(2)*s(3));
+            temp = data_test(:,:,timeIdx{iTime});
+            s = size(temp);
+            data_test_temp{iTime} = reshape(temp,s(1),s(2)*s(3));
+        end
+        data_train = cat(3,data_train_temp{:});
+        data_test = cat(3,data_test_temp{:});
+        % Free up space
+        [data_train_temp,data_test_temp] = deal([]); %#ok<*ASGLU>
     end
     
     for t = 1:n_time
@@ -147,7 +157,7 @@ result_cv = squeeze(nanmean(result_cv,1));
 
 end
 
-function result_cv = betweenClassCrossVal(data,labels,cvMethod,distMeasure,doNoiseNorm,poolOverTime)
+function result_cv = betweenClassCrossVal(data,labels,cvMethod,distMeasure,doNoiseNorm,timeIdx)
 % Computes between class crossvalidated distance measure
 
 n_trials = histcounts(labels,'BinMethod','integers');
@@ -170,9 +180,7 @@ switch cvMethod
 end
 
 n_time_orig = n_time;
-if poolOverTime
-    n_time = 1;
-end
+n_time = numel(timeIdx);
 
 result_cv = nan(n_perm, n_conditions, n_conditions, n_time);
 
@@ -235,11 +243,21 @@ for iPerm = 1:n_perm
         end
     end
     
-    if poolOverTime
-        s_train = size(data_train);
-        data_train = reshape(data_train,s_train(1),s_train(2)*s_train(3));
-        s_test = size(data_test);
-        data_test = reshape(data_test,s_test(1),s_test(2)*s_train(3));
+    % Reshaping time dimension if necessary
+    if any(cellfun(@numel,timeIdx) > 1)
+        [data_train_temp,data_test_temp] = deal(cell(n_time,1));
+        for iTime = 1:n_time
+            temp = data_train(:,:,timeIdx{iTime});
+            s = size(temp);
+            data_train_temp{iTime} = reshape(temp,s(1),s(2)*s(3));
+            temp = data_test(:,:,timeIdx{iTime});
+            s = size(temp);
+            data_test_temp{iTime} = reshape(temp,s(1),s(2)*s(3));
+        end
+        data_train = cat(3,data_train_temp{:});
+        data_test = cat(3,data_test_temp{:});
+        % Free up space
+        [data_train_temp,data_test_temp] = deal([]); %#ok<*ASGLU>
     end
     
     for t = 1:n_time
