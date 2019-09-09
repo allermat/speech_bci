@@ -20,10 +20,13 @@ for i = 1:numel(fileNames)
     dimToCat = ndims(dataLoaded(1).distAll)+1;
     
     dataToSave.distAll = nanmean(cat(dimToCat,dataLoaded.distAll),dimToCat);
+    dataToSave.distAll_indiv = cat(dimToCat,dataLoaded.distAll);
     dataToSave.distAll_var = nanvar(cat(dimToCat,dataLoaded.distAll),0,dimToCat);
     dataToSave.distWithin = nanmean(cat(dimToCat,dataLoaded.distWithin),dimToCat);
+    dataToSave.distWithin_indiv = cat(dimToCat,dataLoaded.distWithin);
     dataToSave.distWithin_var = nanvar(cat(dimToCat,dataLoaded.distWithin),0,dimToCat);
     dataToSave.distBetween = nanmean(cat(dimToCat,dataLoaded.distBetween),dimToCat);
+    dataToSave.distBetween_indiv = cat(dimToCat,dataLoaded.distBetween);
     dataToSave.distBetween_var = nanvar(cat(dimToCat,dataLoaded.distBetween),0,dimToCat);
     
     savePath = fullfile(BCI_setupdir('analysis_meg_sub_mvpa','group'),...
