@@ -1,0 +1,3 @@
+[submodule "toolbox/legacy_STRAIGHT"]
+	path = toolbox/legacy_STRAIGHT
+	url = https://github.com/HidekiKawahara/legacy_STRAIGHT.git
