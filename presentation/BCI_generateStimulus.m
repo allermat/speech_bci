@@ -18,6 +18,7 @@ S = p.Results.S;
 audioNoise = S.audioNoise;
 audioWords = S.audioWords;
 wordsLoaded = S.wordsLoaded;
+vocodeMethod = S.vocodeMethod;
 nCh = S.nCh;
 nNoiseStimuli = S.nNoiseStimuli;
 nRepetitionPerWord = S.nRepetitionPerWord;
@@ -43,12 +44,24 @@ for i = 1:nNoiseStimuli
             'UniformOutput',false);
         % Choose randomly either of the instances of each word
         idx = cellfun(@(x) x(randi(numel(x))),temp);
-        noise{i} = BCI_generateVocodedNoise(audioNoise(idx),nCh, ...
-            'lpCutoff',noiseLpCutoff);
+        switch vocodeMethod
+            case 'VOCODER'
+                noise{i} = BCI_generateVocodedNoise(audioNoise(idx),nCh, ...
+                    'lpCutoff',noiseLpCutoff);
+            case 'STRAIGHT'
+                noise{i} = BCI_generateNoiseStraight(audioNoise(idx), ...
+                    'lpCutoff',noiseLpCutoff);
+        end
     else
         % Use all available tokens to generate noise
-        noise{i} = BCI_generateVocodedNoise(audioNoise,nCh, ...
-            'lpCutoff',noiseLpCutoff);
+        switch vocodeMethod
+            case 'VOCODER'
+                noise{i} = BCI_generateVocodedNoise(audioNoise,nCh, ...
+                    'lpCutoff',noiseLpCutoff);
+            case 'STRAIGHT'
+                noise{i} = BCI_generateNoiseStraight(audioNoise, ...
+                    'lpCutoff',noiseLpCutoff);
+        end
     end
 end
 
@@ -58,10 +71,16 @@ wordKeysAll = NaN(nRepetitionPerWord,nUniqueWords);
 for iRep = 1:nRepetitionPerWord
     for iWord = 1:nUniqueWords
         idx = find(ismember(wordsLoaded,uniqueWords{iWord}));
-        % Choose randomly either of the instances of the words
-        [~,~,~,wordsAll{iRep,iWord}] = vocode_ma('noise','n','greenwood','half', ...
-            30,nCh,audioWords(idx(randi(2))),'');
-        wordKeysAll(iRep,iWord) = wordKey(iWord);
+        switch vocodeMethod
+            case 'VOCODER'
+                % Choose randomly either of the instances of the words
+                [~,~,~,wordsAll{iRep,iWord}] = vocode_ma('noise','n','greenwood','half', ...
+                    30,nCh,audioWords(idx(randi(2))),'');
+                
+            case 'STRAIGHT'
+                wordsAll{iRep,iWord} = applyStraight(audioWords(idx(randi(2))));
+        end
+       wordKeysAll(iRep,iWord) = wordKey(iWord);
     end
 end
 noiseKey = numel(wordKey)+1;

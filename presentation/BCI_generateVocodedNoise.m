@@ -7,7 +7,6 @@ addRequired(p,'nCh',@(x) validateattributes(x,{'numeric'},{'scalar','integer'}))
 addParameter(p,'lpCutoff',30,@(x) validateattributes(x,{'numeric'},{'scalar'}));
 addParameter(p,'saveFile',false,@(x) validateattributes(x,{'logical'},{'scalar'}));
 
-
 parse(p,audio2vocode,nCh,varargin{:});
 
 audio2vocode = p.Results.audio2vocode;
@@ -31,7 +30,7 @@ nSmp = size(env_all,2);
 env_mean = mean(env_all,3);
 levels_mean = mean(levels_all,2);
 
-[filterA,filterB]=estfilt(nCh,'greenwood',44100,0);
+[filterA,filterB]=estfilt(nCh,'greenwood',audio2vocode(1).Fs,0);
 
 noise_all = [];
 for i=1:nCh

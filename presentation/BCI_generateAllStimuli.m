@@ -66,9 +66,9 @@ filesNoise = filesNoise(~cellfun(@isempty,...
 
 % First read the words from disk and perform the vocoding on the already
 % loaded data, it is more economical this way.
-[y,Fs] = cellfun(@audioread,fullfile(inputDir,filesNoise'),...
+[y,fs] = cellfun(@audioread,fullfile(inputDir,filesNoise'),...
                  'UniformOutput',false);
-audioNoise = cell2struct(cat(1,y,Fs),{'y','Fs'},1);
+audioNoise = cell2struct(cat(1,y,fs),{'y','Fs'},1);
 
 % Making sure all files are the same length. Sometimes they differ by 1
 % sample. 
@@ -99,12 +99,15 @@ switch noiseMode
         S.audioNoise = S.audioWords;
         S.randSelect = true;
 end
+S.fs = fs;
 S.wordsLoaded = wordsLoaded;
 S.nCh = 16; % number of channels for vocoding
 S.nRepetitionPerWord = 12; % number of repetitions per words
 S.nNoiseStimuli = S.nRepetitionPerWord*nUniqueWords; % number of noise stimuli per trial
 S.nRepetitionMinimum = 10;
 S.wordKey = wordKey;
+% S.vocodeMethod = 'VOCODER';
+S.vocodeMethod = 'STRAIGHT';
 S.noiseLpCutoff = 5; % LP filter cutoff frequency (Hz) for noise vocoding
 
 % Defining target words and how many times they are presented
