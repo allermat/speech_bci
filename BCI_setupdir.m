@@ -60,7 +60,7 @@ end
 
 % base folder depending on the setup
 if strcmpi(setupID,'PC0220')
-    baseDir = 'U:';
+    baseDir = 'V:';
     mode = 'home';
 elseif strcmpi(setupID,'DESKTOP-T5R7MNQ')
     baseDir = 'D:';
