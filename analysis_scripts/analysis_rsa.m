@@ -9,7 +9,9 @@ addRequired(p,'subID',@(x) validateattributes(x,{'char'},{'nonempty'}));
 addParameter(p,'ftData',struct([]),@isstruct);
 addParameter(p,'analysis','words',@(x) ismember(x,validAnalyses));
 addParameter(p,'channel','all',@(x) validateattributes(x,{'char'},{'nonempty'}));
-addParameter(p,'timeMode',@(x) ismember(x,validTimeModes));
+addParameter(p,'timeMode','resolved',@(x) ismember(x,validTimeModes));
+addParameter(p,'equalizeTargetDistance',false,...
+             @(x) validateattributes(x,{'logical'},{'scalar'}));
 
 parse(p,subID,varargin{:});
 
@@ -18,6 +20,7 @@ ftData = p.Results.ftData;
 analysis = p.Results.analysis;
 channel = p.Results.channel;
 timeMode = p.Results.timeMode;
+equalizeTargetDistance = p.Results.equalizeTargetDistance;
 
 % Loading data if necessary
 if isempty(ftData)
@@ -26,13 +29,29 @@ if isempty(ftData)
     ftData = ftData.ftDataClean;
 end
 
-% Select channels
+trialInfo = struct2table(cell2mat(ftData.trialinfo));
+if equalizeTargetDistance
+    % Equalize target temporal distances
+    tempTrials = unique(trialInfo(:,{'iRun','iTrialInRun','target'}),'rows');
+    idxToRemove = equalize_target_temporal_distance(tempTrials.target,...
+        'nToEliminate',4,'plotFigure',true);
+    trialsToKeep = ~ismember(trialInfo(:,{'iRun','iTrialInRun'}),...
+                             tempTrials(idxToRemove,{'iRun','iTrialInRun'}),...
+                             'rows')';
+else
+    trialsToKeep = true(1,size(trialInfo,1));
+end
+
+% Select channels and trials if applicable
 cfg = struct();
 cfg.channel = channel;
+cfg.trials = trialsToKeep;
 ftData = ft_selectdata(cfg,ftData);
 
 condDef = generateCondDef();
 megData = ftData.trial;
+% Trials might have been potentially removed previously, so better create
+% trialInfo from fieldtrip file again. 
 trialInfo = struct2table(cell2mat(ftData.trialinfo));
 trialInfo.target = categorical(trialInfo.target);
 % Recoding target to numbers for consistency with the variable 'condition'
@@ -99,11 +118,12 @@ end
 % Clearing variables before saving
 clearvars ftData megData varargin p
 % Saving data
-fileName = sprintf('%s_time-%s_chan-%s.mat',analysis,timeMode,channel);
+fileName = sprintf('%s_time-%s_chan-%s_%s.mat',analysis,timeMode,channel,...
+                   datestr(now,'yymmddHHMMSS'));
 destDir = fullfile(BCI_setupdir('analysis_meg_sub_mvpa',subID),'RSA');
 if ~exist(destDir,'dir'), mkdir(destDir); end
 save(fullfile(destDir,fileName),'analysis','channel','condDef',...
     'conditions','condSelection','distAll','distBetween','distWithin',...
-    'timeLabel','timeMode','-v7.3');
+    'subID','timeLabel','timeMode','-v7.3');
 
 end

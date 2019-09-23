@@ -1,10 +1,27 @@
-function plot_rsa(subID__,matchStr)
+function plot_rsa(subID_list,matchStr)
 % Function for plotting RSA results
 
-for iSub = 1:numel(subID__)
+for iSub = 1:numel(subID_list)
     
-    sourceDir = fullfile(BCI_setupdir('analysis_meg_sub_mvpa',subID__{iSub}),'RSA');
-    load(fullfile(sourceDir,[matchStr,'.mat']));
+    subID = subID_list{iSub};
+    
+    saveDf = cd(fullfile(BCI_setupdir('analysis_meg_sub_mvpa',subID_list{iSub}),'RSA'));
+    fileList = dir('*.mat');
+    fileList = {fileList.name}';
+    matchID = ~cellfun(@isempty,regexp(fileList,matchStr));
+    if sum(matchID) == 0
+        warning('No file, skipping subject %s! ',subID_list{iSub});
+        cd(saveDf);
+        continue;
+    elseif sum(matchID) > 1
+        warning('More files than needed, skipping subject %s! ',subID_list{iSub});
+        cd(saveDf);
+        continue;
+    else
+        fileName = fileList{matchID};
+        load(fileName);
+        cd(saveDf);
+    end
     
     % Taking care of variables from older version of the script
     if exist('timeLabel','var')
@@ -21,6 +38,9 @@ for iSub = 1:numel(subID__)
         end
     end
     
+    if ~exist('subID','var')
+        subID = subID_list{iSub};
+    end
     % Mapping of colors
     % cmap = [0,1,0;1,0,0;0,0,1];
     cmap2 = [77,175,74;228,26,28;55,126,184;152,78,163]./255;
