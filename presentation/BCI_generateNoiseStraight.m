@@ -13,7 +13,7 @@ lpCutoff = p.Results.lpCutoff;
 saveFile = p.Results.saveFile;
 
 % smoothing the spectrogram
-mavgwin = 1/lpCutoff*1000;       % 20ms with 1ms time-steps
+mavgwin = round(1/lpCutoff*1000);       % 20ms with 1ms time-steps
 % Kernel for smoothing trials with the given time wintow
 kern = ones(1,mavgwin)./mavgwin;
 
