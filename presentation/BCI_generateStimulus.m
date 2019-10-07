@@ -33,14 +33,16 @@ noiseLpCutoff = S.noiseLpCutoff;
 
 % Applying STRAIGHT only once for each token
 if strcmp(vocodeMethod,'STRAIGHT')
-    if ~randSelect
-        noise_straight = BCI_generateNoiseStraight(audioNoise, ...
-                    'lpCutoff',noiseLpCutoff);
-    end
-    words_straight = cell(size(audioWords));
-    for i = 1:numel(words_straight)
-        words_straight{i} = applyStraight(audioWords(i));
-    end
+%     if ~randSelect
+%         noise_straight = BCI_generateNoiseStraight(audioNoise, ...
+%                     'lpCutoff',noiseLpCutoff);
+%     end
+%     words_straight = cell(size(audioWords));
+%     for i = 1:numel(words_straight)
+%         words_straight{i} = applyStraight(audioWords(i));
+%     end
+    noise_straight = S.noise_straight;
+    words_straight = S.words_straight;
 end
 
 % Generate noise

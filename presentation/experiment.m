@@ -44,7 +44,7 @@ if syncMode
 end
 
 % Developing mode
-devMode = true;
+devMode = false;
 if devMode
     warning('Experiment runs in development mode! '); %#ok
 end
@@ -74,7 +74,7 @@ quit = KbName('ESCAPE');
 %% Preload sound files into matlab workspace
 
 % Full path to the file containing the stimuli
-filePath = fullfile(BCI_setupdir('data_behav_sub',num2str(subjectId)),'stim.mat');
+filePath = fullfile(BCI_setupdir('data_behav_sub',subjectId),'stim.mat');
 
 if ~syncMode
     if devMode || practiceMode
@@ -253,7 +253,7 @@ try
                  targetWordsAll(iRun,:)',responses,correctResponses',...
                  'VariableNames',dataVarNames);
     % Saving experiment data
-    savedfname = fullfile(BCI_setupdir('data_behav_sub',num2str(subjectId)),...
+    savedfname = fullfile(BCI_setupdir('data_behav_sub',subjectId),...
         sprintf('subj%d_run%d_%s.mat',subjectId,...
         iRun,datestr(now,'ddmmyyyy_HHMM')));
     save(savedfname,'data');

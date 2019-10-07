@@ -248,6 +248,20 @@ switch noiseWordSelection
         S.audioNoise = S.audioWords;
         S.randSelect = false;
 end
+
+% Applying STRAIGHT only once for each token
+if strcmp(vocodeMethod,'STRAIGHT')
+    if ~S.randSelect
+        noise_straight = BCI_generateNoiseStraight(audioNoise, ...
+                    'lpCutoff',noiseLpCutoff);
+    end
+    words_straight = cell(size(audioWords));
+    for i = 1:numel(words_straight)
+        words_straight{i} = applyStraight(audioWords(i));
+    end
+    S.noise_straight = noise_straight;
+    S.words_straight = words_straight;
+end
 S.fs = fs;
 S.wordsLoaded = wordsLoaded;
 S.jitter = jitter;
