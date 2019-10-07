@@ -44,7 +44,7 @@ if syncMode
 end
 
 % Developing mode
-devMode = false;
+devMode = true;
 if devMode
     warning('Experiment runs in development mode! '); %#ok
 end
@@ -74,16 +74,16 @@ quit = KbName('ESCAPE');
 %% Preload sound files into matlab workspace
 
 % Full path to the file containing the stimuli
-filePath = fullfile(BCI_setupdir('data_behav_sub',subjectId),'stim.mat');
+filePath = fullfile(BCI_setupdir('data_behav_sub',num2str(subjectId)),'stim.mat');
 
 if ~syncMode
     if devMode || practiceMode
-        [stimAll,stimKeyAll,targetWordsAll,nTargetsAll] = ...
+        [stimAll,stimKeyAll,stimDurAll,targetWordsAll,nTargetsAll] = ...
             BCI_generateAllStimuli(subjectId,'nRuns',nRuns,'nTrialsPerRun', ...
                                    nTrialsPerRun,'randSeed',sCurr.Seed,...
                                    'saveFile',false);
     else
-        load(filePath,'stimAll','stimKeyAll','targetWordsAll','nTargetsAll');
+        load(filePath,'stimAll','stimKeyAll','stimDurAll','targetWordsAll','nTargetsAll');
     end
 else
     % Generate 50 ms Gaussian white noise bursts followed by 450 ms silence
@@ -139,7 +139,7 @@ try
         targetWordCurrent = targetWordsAll{iRun,iTrial};
         audioCurrent = repmat(stimAll{iRun,iTrial},2,1);
         stimTriggerCurrent = stimKeyAll{iRun,iTrial};
-        
+        stimTriggerWaitTimeCurrent = cumsum(stimDurAll{iRun,iTrial});
         
         % Display target word
         if ~syncMode
@@ -175,14 +175,14 @@ try
                 abort = true;
                 break;
             end
-            WaitSecs('UntilTime', tStartSoundCurrent+((iStim)*0.625));
+            WaitSecs('UntilTime',tStartSoundCurrent+stimTriggerWaitTimeCurrent(iStim));
         end
         % Stop the sound
         [~,~,~,tEndSoundCurrent] = PsychPortAudio('Stop',pahandle);
         
         if ~abort
             % Present question
-            txt = sprintf('How many targets\ndid you count?\n10(Y)   11(G)   12(R)');
+            txt = sprintf('How many targets\ndid you count?\n8(Y)   9(G)   10(R)');
             DrawFormattedText(window, txt, 'center', 'center', black);
             Screen('Flip', window);
             % Send trigger to indicate the onset of the response screen
@@ -202,9 +202,9 @@ try
                 % for 5, so I just add 7 the the buttonPressed variable to get
                 % the values
                 switch buttonPressed{1}
-                    case 'RY', respCurrent = 10;
-                    case 'RG', respCurrent = 11;
-                    case 'RR', respCurrent = 12;
+                    case 'RY', respCurrent = 8;
+                    case 'RG', respCurrent = 9;
+                    case 'RR', respCurrent = 10;
                     otherwise, respCurrent = 0;
                 end
                 % Send response trigger
@@ -253,7 +253,7 @@ try
                  targetWordsAll(iRun,:)',responses,correctResponses',...
                  'VariableNames',dataVarNames);
     % Saving experiment data
-    savedfname = fullfile(BCI_setupdir('data_behav_sub',subjectId),...
+    savedfname = fullfile(BCI_setupdir('data_behav_sub',num2str(subjectId)),...
         sprintf('subj%d_run%d_%s.mat',subjectId,...
         iRun,datestr(now,'ddmmyyyy_HHMM')));
     save(savedfname,'data');

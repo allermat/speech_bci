@@ -29,4 +29,6 @@ end
 
 synth_y = synth_y';
 
+synth_y = synth_y./rms(synth_y);
+
 end

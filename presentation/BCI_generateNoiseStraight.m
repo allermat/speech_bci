@@ -44,9 +44,10 @@ for i = 1:numel(audioIn)
     end
 end
 
-
+% noiseSummed = sum(cat(3,synth_y{:}),3)';
 
 noiseSummed = mean(cat(3,synth_y{:}),3)';
+noiseSummed = noiseSummed./rms(noiseSummed);
 
 % if saveFile
 %     audfiowrite(sprintf('%d_ch_noise.wav',nCh),noiseSummed,44100);

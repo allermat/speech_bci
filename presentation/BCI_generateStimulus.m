@@ -1,8 +1,8 @@
-function [stim,stimKey] = BCI_generateStimulus(S)
+function [stim,stimKey,stimDuration] = BCI_generateStimulus(S)
 
 p = inputParser;
 
-fieldsReqS = {'audioNoise','audioWords','wordsLoaded','jitter','nCh',...
+fieldsReqS = {'audioNoise','audioWords','wordsLoaded','jitter','prestim','nCh',...
               'nNoiseStimuli','nRepetitionPerWord','nTargets',...
               'noiseLpCutoff','targetKey','nRepetitionMinimum','wordKey',...
               'randSelect'};
@@ -21,15 +21,27 @@ audioWords = S.audioWords;
 wordsLoaded = S.wordsLoaded;
 vocodeMethod = S.vocodeMethod;
 jitter = S.jitter;
+prestim = S.prestim;
 nCh = S.nCh;
 nNoiseStimuli = S.nNoiseStimuli;
 nRepetitionPerWord = S.nRepetitionPerWord;
-nRepetitionMinimum = S.nRepetitionMinimum;
+% nRepetitionMinimum = S.nRepetitionMinimum;
 wordKey = S.wordKey;
 uniqueWords = unique(wordsLoaded);
-nUniqueWords = numel(uniqueWords);
 randSelect = S.randSelect;
 noiseLpCutoff = S.noiseLpCutoff;
+
+% Applying STRAIGHT only once for each token
+if strcmp(vocodeMethod,'STRAIGHT')
+    if ~randSelect
+        noise_straight = BCI_generateNoiseStraight(audioNoise, ...
+                    'lpCutoff',noiseLpCutoff);
+    end
+    words_straight = cell(size(audioWords));
+    for i = 1:numel(words_straight)
+        words_straight{i} = applyStraight(audioWords(i));
+    end
+end
 
 % Generate noise
 noise = cell(nNoiseStimuli,1);
@@ -61,40 +73,44 @@ for i = 1:nNoiseStimuli
                 noise{i} = BCI_generateVocodedNoise(audioNoise,nCh, ...
                     'lpCutoff',noiseLpCutoff);
             case 'STRAIGHT'
-                noise{i} = BCI_generateNoiseStraight(audioNoise, ...
-                    'lpCutoff',noiseLpCutoff);
+                noise{i} = noise_straight;
         end
     end
     % Add jitter if necessary
     if jitter > 0
-        noise{i} = cat(2,noise{i},zeros(1,round(jitter*rand()*audioNoise(1).Fs)));
+        noise{i} = cat(2,noise{i},zeros(1,round((prestim+jitter*rand())*audioNoise(1).Fs)));
     end
 end
 
 % Vocode words
-wordsAll = cell(nRepetitionPerWord,nUniqueWords);
-wordKeysAll = NaN(nRepetitionPerWord,nUniqueWords);
-for iRep = 1:nRepetitionPerWord
-    for iWord = 1:nUniqueWords
-        idx = find(ismember(wordsLoaded,uniqueWords{iWord}));
-        idx = idx(randi(numel(idx)));
-        switch vocodeMethod
-            case 'VOCODER'
-                % Choose randomly either of the instances of the words
-                [~,~,~,wordsAll{iRep,iWord}] = vocode_ma('noise','n','greenwood','half', ...
-                    30,nCh,audioWords(idx),'');
-                
-            case 'STRAIGHT'
-                wordsAll{iRep,iWord} = applyStraight(audioWords(idx));
-        end
-        % Add jitter if necessary
-        if jitter > 0
-            wordsAll{iRep,iWord} = cat(2,wordsAll{iRep,iWord},...
-                zeros(1,round(jitter*rand()*audioNoise(1).Fs)));
-        end
-        wordKeysAll(iRep,iWord) = wordKey(iWord);
+wordKeysAll = repmat(wordKey,nRepetitionPerWord,1);
+wordKeysAll = wordKeysAll(:);
+% Adding instances of target word if necessary
+if S.nTargets > nRepetitionPerWord
+    nToAdd = nRepetitionPerWord-S.nTargets;
+    wordKeysAll = cat(1,wordKeysAll,repmat(S.targetKey,nToAdd,1));
+end
+wordsAll = cell(size(wordKeysAll));
+
+for iWord = 1:numel(wordsAll)
+    idx = find(ismember(wordsLoaded,uniqueWords{wordKey == wordKeysAll(iWord)}));
+%     idx = idx(randi(numel(idx)));
+    switch vocodeMethod
+        case 'VOCODER'
+            % Choose randomly either of the instances of the words
+            [~,~,~,wordsAll{iWord}] = vocode_ma('noise','n','greenwood','half', ...
+                30,nCh,audioWords(idx),'');
+            
+        case 'STRAIGHT'
+            wordsAll{iWord} = words_straight{idx};
+    end
+    % Add jitter if necessary
+    if jitter > 0
+        wordsAll{iWord} = cat(2,wordsAll{iWord},...
+            zeros(1,round((prestim+jitter*rand())*audioNoise(1).Fs)));
     end
 end
+
 noiseKey = numel(wordKey)+1;
 
 % Devide targ into two subparts and randomize separately
@@ -126,20 +142,14 @@ noiseKey = numel(wordKey)+1;
 %     stimKey_2(idx(1:nToRemove)) = [];
 % end
 
-stim = wordsAll(1:nRepetitionMinimum,:);
-stim = stim(:);
-stim = cat(1,stim,noise);
-stimKey = wordKeysAll;
-stimKey = stimKey(:);
-stimKey = cat(1,stimKey,noiseKey*ones(size(noise)));
-randVector = randperm(size(stim,1));
+stim = cat(1,wordsAll,noise);
+stimKey = cat(1,wordKeysAll,noiseKey*ones(size(noise)));
+randVector = pseudorandomize_stimuli(stimKey);
 stim = stim(randVector);
 stimKey = stimKey(randVector);
+stimDuration = cellfun(@(x) numel(x)/audioNoise(1).Fs,stim);
 stim = cat(2,stim{:});
-
-% stim = cat(2,stim_1{:},stim_2{:});
 % Normalize stimulus between +/-1
 stim = stim./max(abs(stim));
-% stimKey = cat(2,stimKey_1',stimKey_2');
 
 end
