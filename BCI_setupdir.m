@@ -32,15 +32,19 @@ validDirIDs = {'analysis_behav','analysis_eeg','analysis_meg','analysis_behav_su
 checkDirID = @(x) any(validatestring(x,validDirIDs));
 
 addOptional(p,'dirID',[],checkDirID);
-addOptional(p,'subID','',@(x) validateattributes(x,{'char'},{'nonempty'}));
+addOptional(p,'subID','',@(x) ischar(x) || isnumeric(x));
 
 parse(p,varargin{:});
 
 dirID = p.Results.dirID;
-subID = p.Results.subID; % subID is converted to character array here!
+subID = p.Results.subID; 
 
+if isnumeric(subID)
+    % subID is converted to character array here if it is numeric
+    subID = num2str(subID);
+end
 %% Setting up the basic directories if necessary. 
-expStage = 'pilot_1';
+expStage = 'pilot_2';
 
 [~,setupID] = system('hostname');
 setupID = regexp(setupID,'[\w -]*','match');
@@ -60,7 +64,7 @@ end
 
 % base folder depending on the setup
 if strcmpi(setupID,'PC0220')
-    baseDir = 'V:';
+    baseDir = 'U:';
     mode = 'home';
 elseif strcmpi(setupID,'DESKTOP-T5R7MNQ')
     baseDir = 'D:';
