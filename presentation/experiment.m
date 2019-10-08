@@ -17,8 +17,9 @@ lines = [1 35]; % 1 row, 35 chars in each line
 defaults = {'','','0'};
 params = inputdlg(prompt,title,lines,defaults);
 if ~isempty(params) % ok is pressed
-    params = cellfun(@str2num,params,'UniformOutput',false);
-    [subjectId,iRun,practiceMode] = params{:};
+    subjectId = params{1};
+    params = cellfun(@str2num,params(2:end),'UniformOutput',false);
+    [iRun,practiceMode] = params{:};
 else % cancel is pressed
     fprintf('Run has been aborted...\n')
     return;
@@ -248,13 +249,13 @@ try
     %% Collect data
     dataVarNames = {'Subject','Run','Trial','Sound_onset','Sound_offset', ...
                     'Target_word','Response','Correct_response'};
-    data = table(repmat(subjectId,nTrialsPerRun,1),repmat(iRun,nTrialsPerRun,1),...
+    data = table(repmat({subjectId},nTrialsPerRun,1),repmat(iRun,nTrialsPerRun,1),...
                  (1:nTrialsPerRun)',tStartSound,tEndSound,... 
                  targetWordsAll(iRun,:)',responses,correctResponses',...
                  'VariableNames',dataVarNames);
     % Saving experiment data
     savedfname = fullfile(BCI_setupdir('data_behav_sub',subjectId),...
-        sprintf('subj%d_run%d_%s.mat',subjectId,...
+        sprintf('behav_%s_run%d_%s.mat',subjectId,...
         iRun,datestr(now,'ddmmyyyy_HHMM')));
     save(savedfname,'data');
     

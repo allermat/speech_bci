@@ -89,7 +89,7 @@ wordKeysAll = repmat(wordKey,nRepetitionPerWord,1);
 wordKeysAll = wordKeysAll(:);
 % Adding instances of target word if necessary
 if S.nTargets > nRepetitionPerWord
-    nToAdd = nRepetitionPerWord-S.nTargets;
+    nToAdd = S.nTargets-nRepetitionPerWord;
     wordKeysAll = cat(1,wordKeysAll,repmat(S.targetKey,nToAdd,1));
 end
 wordsAll = cell(size(wordKeysAll));

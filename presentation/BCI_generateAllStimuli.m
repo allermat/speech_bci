@@ -8,8 +8,7 @@ validVocodeMethods = {'VOCODER','STRAIGHT'};
 
 p = inputParser;
 
-addRequired(p,'subjectId',@(x) validateattributes(x,{'numeric'}, ...
-            {'scalar','integer','nonnegative'}));
+addRequired(p,'subjectId',@(x) validateattributes(x,{'char'},{'nonempty'}));
 addParameter(p,'nRuns',6,@(x) validateattributes(x,{'numeric'}, ...
              {'scalar','integer','nonnegative'}));
 addParameter(p,'nTrialsPerRun',12,@(x) validateattributes(x,{'numeric'}, ...
