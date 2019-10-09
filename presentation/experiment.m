@@ -54,7 +54,7 @@ end
 debugMode = 0;
  
 % Add a practice mode with 1 run only but in the scanner
-if devMode || practiceMode
+if devMode || practiceMode || syncMode
     nRuns = 1;
     nTrialsPerRun = 1;
 else
@@ -88,11 +88,14 @@ if ~syncMode
     end
 else
     % Generate 50 ms Gaussian white noise bursts followed by 450 ms silence
+    nStim = 100;
     noiseDuration = 0.05;
-    noise = cat(1,randn(round(fs*noiseDuration),72),...
-                zeros(round(fs*(1/wordFreq-noiseDuration)),72));
+    stimDuration = 0.5;
+    noise = cat(1,randn(round(fs*noiseDuration),nStim),...
+                zeros(round(fs*(stimDuration-noiseDuration)),nStim));
     stimAll = {noise(:)'};
-    stimKeyAll = {ones(1,72)};
+    stimKeyAll = {ones(1,nStim)};
+    stimDurAll = {stimDuration*ones(1,nStim)};
     targetWordsAll = {'yes'};
     nTargetsAll = 12;
 end
@@ -118,9 +121,11 @@ try
     es_ptb_prepare;
     
     %% Ask participant if ready to start
-    DrawFormattedText(window, 'Press button when ready...', 'center', 'center', black);
-    Screen('Flip', window);
-    MEG.WaitForButtonPress();
+    if ~syncMode
+        DrawFormattedText(window, 'Press button when ready...', 'center', 'center', black);
+        Screen('Flip', window);
+        MEG.WaitForButtonPress();
+    end
     DrawFormattedText(window, '+', 'center', 'center', black);
     Screen('Flip', window);
     WaitSecs(1);
