@@ -43,6 +43,17 @@ if strcmp(vocodeMethod,'STRAIGHT')
 %     end
     noise_straight = S.noise_straight;
     words_straight = S.words_straight;
+    % noiseKey
+    if ~iscell(noise_straight)
+        noiseKey = numel(wordKey)+1;
+        noiseKeysAll = noiseKey*ones(nNoiseStimuli,1);
+    else
+        noiseKey = numel(wordKey)+(1:numel(noise_straight));
+        noiseKeysAll = NaN(nNoiseStimuli,1);
+    end
+elseif strcmp(vocodeMethod,'VOCODER')
+    noiseKey = numel(wordKey)+1;
+    noiseKeysAll = noiseKey*ones(nNoiseStimuli,1);
 end
 
 % Generate noise
@@ -75,7 +86,16 @@ for i = 1:nNoiseStimuli
                 noise{i} = BCI_generateVocodedNoise(audioNoise,nCh, ...
                     'lpCutoff',noiseLpCutoff);
             case 'STRAIGHT'
-                noise{i} = noise_straight;
+                if ~iscell(noise_straight)
+                    % In this case there's only one noise stimulus
+                    noise{i} = noise_straight;
+                else
+                    % In this case there are multiple noise varieties, make
+                    % sure to use them equal times
+                    idx = mod(i,numel(noise_straight))+1;
+                    noise{i} = noise_straight{idx};
+                    noiseKeysAll(i) = noiseKey(idx);
+                end
         end
     end
     % Add jitter if necessary
@@ -113,8 +133,6 @@ for iWord = 1:numel(wordsAll)
     end
 end
 
-noiseKey = numel(wordKey)+1;
-
 % Devide targ into two subparts and randomize separately
 % stim_1 = wordsAll(1:nRepetitionMinimum,:);
 % stim_1 = stim_1(:);
@@ -145,7 +163,7 @@ noiseKey = numel(wordKey)+1;
 % end
 
 stim = cat(1,wordsAll,noise);
-stimKey = cat(1,wordKeysAll,noiseKey*ones(size(noise)));
+stimKey = cat(1,wordKeysAll,noiseKeysAll);
 randVector = pseudorandomize_stimuli(stimKey);
 stim = stim(randVector);
 stimKey = stimKey(randVector);
