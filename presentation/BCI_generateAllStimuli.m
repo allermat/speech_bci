@@ -26,6 +26,7 @@ addParameter(p,'randSeed',[],@(x) validateattributes(x,{'numeric'}, ...
 addParameter(p,'vocodeMethod','STRAIGHT',@(x) ismember(x,validVocodeMethods));
 addParameter(p,'saveFile',true,@(x) validateattributes(x,{'logical'}, ...
              {'scalar'}));
+addParameter(p,'fileName','stim',@(x) validateattributes(x,{'char'},{'nonempty'}));
 
 parse(p,subjectId,varargin{:});
 
@@ -40,6 +41,7 @@ noiseLpCutoff = p.Results.noiseLpCutoff;
 randSeed = p.Results.randSeed;
 vocodeMethod = p.Results.vocodeMethod;
 saveFile = p.Results.saveFile;
+fileName = p.Results.fileName;
 
 if ismember('randSeed',p.UsingDefaults)
     rng('shuffle');
@@ -277,8 +279,8 @@ S.noiseLpCutoff = noiseLpCutoff; % LP filter cutoff frequency (Hz) for noise voc
 targetWords = uniqueWords;
 if nTrialsPerRun == 1
     % This option is only relevant for devMode
-    targetWordsAll = targetWords(randi(nUniqueWords));
-    nTargetsAll = nRepetitionPerWord;
+    targetWordsAll = targetWords(randperm(nUniqueWords));
+    nTargetsAll = repmat(nRepetitionPerWord,nUniqueWords,1);
 elseif mod(nTrialsPerRun/nUniqueWords,1) ~= 0
     error(['The number of trials per run must be a multiple of the number ',...
            'of target words']);
@@ -320,7 +322,10 @@ end
 
 % Full path to the file containing the stimuli
 if saveFile
-    filePath = fullfile(BCI_setupdir('data_behav_sub',subjectId),'stim.mat');
+    if isempty(strfind(fileName,'.mat')) %#ok<STREMP>
+        fileName = strcat(fileName,'.mat');
+    end
+    filePath = fullfile(BCI_setupdir('data_behav_sub',subjectId),fileName);
     if exist(filePath,'file')
         delete(filePath);
     end

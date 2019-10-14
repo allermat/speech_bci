@@ -19,7 +19,8 @@ params = inputdlg(prompt,title,lines,defaults);
 if ~isempty(params) % ok is pressed
     subjectId = params{1};
     params = cellfun(@str2num,params(2:end),'UniformOutput',false);
-    [iRun,practiceMode] = params{:};
+    [iRun,isPractice] = params{:};
+    isPractice = logical(isPractice);
 else % cancel is pressed
     fprintf('Run has been aborted...\n')
     return;
@@ -54,12 +55,25 @@ end
 debugMode = 0;
  
 % Add a practice mode with 1 run only but in the scanner
-if devMode || practiceMode || syncMode
+if syncMode
     nRuns = 1;
     nTrialsPerRun = 1;
+elseif devMode
+    if isPractice
+        nRuns = 1;
+        nTrialsPerRun = 1;
+    else
+        nRuns = 6;
+        nTrialsPerRun = 1;
+    end
 else
-    nRuns = 6;
-    nTrialsPerRun = 12;
+    if isPractice
+        nRuns = 6;
+        nTrialsPerRun = 1;
+    else
+        nRuns = 6;
+        nTrialsPerRun = 12;
+    end
 end
 fs = 44100;
 nrchannels = 2;
@@ -73,20 +87,7 @@ KbName('UnifyKeyNames');
 quit = KbName('ESCAPE');
 
 %% Preload sound files into matlab workspace
-
-% Full path to the file containing the stimuli
-filePath = fullfile(BCI_setupdir('data_behav_sub',subjectId),'stim.mat');
-
-if ~syncMode
-    if devMode || practiceMode
-        [stimAll,stimKeyAll,stimDurAll,targetWordsAll,nTargetsAll] = ...
-            BCI_generateAllStimuli(subjectId,'nRuns',nRuns,'nTrialsPerRun', ...
-                                   nTrialsPerRun,'randSeed',sCurr.Seed,...
-                                   'saveFile',false);
-    else
-        load(filePath,'stimAll','stimKeyAll','stimDurAll','targetWordsAll','nTargetsAll');
-    end
-else
+if syncMode
     % Generate 50 ms Gaussian white noise bursts followed by 450 ms silence
     nStim = 100;
     noiseDuration = 0.05;
@@ -98,6 +99,27 @@ else
     stimDurAll = {stimDuration*ones(1,nStim)};
     targetWordsAll = {'yes'};
     nTargetsAll = 12;
+elseif devMode
+    if isPractice
+        % Full path to the file containing the stimuli
+        filePath = fullfile(BCI_setupdir('data_behav_sub',subjectId),'stim_pract.mat');
+        load(filePath,'stimAll','stimKeyAll','stimDurAll','targetWordsAll','nTargetsAll');
+    else
+        [stimAll,stimKeyAll,stimDurAll,targetWordsAll,nTargetsAll] = ...
+            BCI_generateAllStimuli(subjectId,'nRuns',nRuns,'nTrialsPerRun', ...
+                                   nTrialsPerRun,'randSeed',sCurr.Seed,...
+                                   'saveFile',false);
+    end
+else
+    if isPractice
+        % Full path to the file containing the stimuli
+        filePath = fullfile(BCI_setupdir('data_behav_sub',subjectId),'stim_pract.mat');
+        load(filePath,'stimAll','stimKeyAll','stimDurAll','targetWordsAll','nTargetsAll');
+    else
+        % Full path to the file containing the stimuli
+        filePath = fullfile(BCI_setupdir('data_behav_sub',subjectId),'stim.mat');
+        load(filePath,'stimAll','stimKeyAll','stimDurAll','targetWordsAll','nTargetsAll');
+    end
 end
 
 
@@ -259,9 +281,15 @@ try
                  targetWordsAll(iRun,:)',responses,correctResponses',...
                  'VariableNames',dataVarNames);
     % Saving experiment data
-    savedfname = fullfile(BCI_setupdir('data_behav_sub',subjectId),...
-        sprintf('behav_%s_run%d_%s.mat',subjectId,...
-        iRun,datestr(now,'ddmmyyyy_HHMM')));
+    if isPractice
+        savedfname = fullfile(BCI_setupdir('data_behav_sub',subjectId),...
+            sprintf('behav_pract_%s_run%d_%s.mat',subjectId,...
+            iRun,datestr(now,'ddmmyyyy_HHMM')));
+    else
+        savedfname = fullfile(BCI_setupdir('data_behav_sub',subjectId),...
+            sprintf('behav_%s_run%d_%s.mat',subjectId,...
+            iRun,datestr(now,'ddmmyyyy_HHMM')));
+    end
     save(savedfname,'data');
     
     %% Shut down and save data
