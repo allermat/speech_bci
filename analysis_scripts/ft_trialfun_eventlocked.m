@@ -26,11 +26,13 @@ evSamples(ismember(evValues,[trStim',trTrialStart'])) = temp;
 trialStartEvSamples = evSamples(ismember(evValues,trTrialStart));
 stimEvSamples = evSamples(ismember(evValues,trStim));
 stimEvValues = evValues(ismember(evValues,trStim));
-% Offsetting stimulus trigger values to match the actual word onsets
-if isrow(cfg.trialdef.trigOffset)
-    cfg.trialdef.trigOffset = cfg.trialdef.trigOffset';
+% Offsetting stimulus trigger values if necessary
+if isfield(cfg.trialdef,'trigOffset')
+    if isrow(cfg.trialdef.trigOffset)
+        cfg.trialdef.trigOffset = cfg.trialdef.trigOffset';
+    end
+    stimEvSamples = stimEvSamples+round(cfg.trialdef.trigOffset*hdr.Fs);
 end
-stimEvSamples = stimEvSamples+round(cfg.trialdef.trigOffset*hdr.Fs);
 
 nStimuli = numel(stimEvSamples);
 [begSamples,endSamples] = deal(NaN(nStimuli,1));

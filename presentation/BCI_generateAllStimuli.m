@@ -253,6 +253,7 @@ end
 % Applying STRAIGHT only once for each token and noise
 if strcmp(vocodeMethod,'STRAIGHT')
     if ~S.randSelect
+        % First noise is the standard summed, second is the word shaped
         [noise_straight{1},noise_straight{2}] = ...
             BCI_generateNoiseStraight(audioNoise,'lpCutoff',noiseLpCutoff);
     end

@@ -10,7 +10,8 @@ fieldsToKeep = {'analysis','channel','condDef','conditions','condSelection',...
 
 for i = 1:numel(fileNames)
     
-    filePathList = collectFiles(subjList,fileNames{i},1);
+    fileMatchStr = regexp(fileNames{i},'([a-zA-Z_-]+)_[0-9]+.mat','tokens','once');
+    filePathList = collectFiles(subjList,fileMatchStr{:},1);
     dataLoaded = cellfun(@load,filePathList);
     
     tempFields = fieldnames(dataLoaded);

@@ -1,7 +1,7 @@
 function analysis_rsa(subID,varargin)
 % Compute dissimilarity measures on MEG data
 
-validAnalyses = {'words','noise','all'};
+validAnalyses = {'words','noise_sum','noise_ws','all'};
 validTimeModes = {'resolved','pooled','movingWin'};
 p = inputParser;
 
@@ -61,12 +61,14 @@ trialInfo.targetNum = rowfun(@(x) condDef.condition(condDef.wordId == x),...
 trialInfo.idx = (1:size(trialInfo,1))';
 
 switch analysis
-    case 'noise'
-        condSelection = 4;
+    case 'noise_sum'
+        condSelection = condDef.condition(ismember(condDef.stimType,'noise_sum'));
+    case 'noise_ws'
+        condSelection = condDef.condition(ismember(condDef.stimType,'noise_ws'));
     case 'words'
-        condSelection = [1,2,3];
+        condSelection = condDef.condition(ismember(condDef.stimType,'word'));
     case 'all'
-        condSelection = [1,2,3,4];
+        condSelection = condDef.condition;
 end
 
 stimIdx = varfun(@(x) x,trialInfo(ismember(trialInfo.condition,condSelection),:),...
@@ -113,7 +115,7 @@ switch timeMode
 end
 
 [distAll,distWithin,distBetween] = distCrossval(data,labels,'doNoiseNorm',true,...
-    'timeIdx',timeIdx); %#ok<ASGLU>
+    'timeIdx',timeIdx);
 
 % Clearing variables before saving
 clearvars ftData megData varargin p

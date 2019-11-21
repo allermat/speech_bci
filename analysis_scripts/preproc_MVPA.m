@@ -70,10 +70,10 @@ if strcmp(runMode,'compICA')
         error('The specified artefact files are not found');
     end
     % Loading behavioural data 
-    matchStr = strcat(subID,'_run[0-9]_[0-9]{8}_[0-9]{4}.mat');
+    matchStr = strcat('behav_',subID,'_run[0-9]_[0-9]{8}_[0-9]{4}.mat');
     listing = dir(behavSourceDir);
     fileNames = {listing.name}';
-    fileNames = fileNames(~cellfun(@isempty,regexp(fileNames,matchStr,'once')));
+    fileNames = fileNames(~cellfun(@isempty,regexpi(fileNames,matchStr,'once')));
     dataBehav = struct2cell(cellfun(@(x) load(x,'data'),fullfile(behavSourceDir,fileNames)));
     % Load stimuli for trigger correction
     matchStr = 'stim.mat';
@@ -123,28 +123,28 @@ if strcmp(runMode,'compICA')
         ftDataHp = [];
         
         %% Epoching
-        % Compute trigger offset
-        trig = cell(1,size(dataStim.stimAll,2));
-        fs = 44100;
-        wordFreq = 1.6;
-        incr = round(1/wordFreq*fs);
-        nTrials = size(dataStim.stimAll,2);
-        for j = 1:nTrials
-            nStim = numel(dataStim.stimKeyAll{iFile,j});
-            trig{j} = 1:incr:incr*nStim; 
-        end
-        trigOffset = cellfun(@compTrigOffset,dataStim.stimAll(iFile,:),...
-                             repmat({fs},1,nTrials),trig,'UniformOutput',false);
+%         % Compute trigger offset
+%         trig = cell(1,size(dataStim.stimAll,2));
+%         fs = 44100;
+%         wordFreq = 1.6;
+%         incr = round(1/wordFreq*fs);
+%         nTrials = size(dataStim.stimAll,2);
+%         for j = 1:nTrials
+%             nStim = numel(dataStim.stimKeyAll{iFile,j});
+%             trig{j} = 1:incr:incr*nStim; 
+%         end
+%         trigOffset = cellfun(@compTrigOffset,dataStim.stimAll(iFile,:),...
+%                              repmat({fs},1,nTrials),trig,'UniformOutput',false);
         % Trial definition
         cfg = struct();
         cfg.headerfile = ...
             fullfile(maxfilterDir,[dataFileNames{iFile},'_trans1st.fif']);
         cfg.trialfun = 'ft_trialfun_eventlocked';
         cfg.trialdef = struct();
-        cfg.trialdef.prestim = 0.1;
-        cfg.trialdef.poststim = 0.5;
+        cfg.trialdef.prestim = 0.2;
+        cfg.trialdef.poststim = 1.2;
         cfg.trialdef.trigdef = trigDef;
-        cfg.trialdef.trigOffset = cat(2,trigOffset{:});
+%         cfg.trialdef.trigOffset = cat(2,trigOffset{:});
         meegFiles = s.getField(subID,'meg_files');
         fileSpec = meegFiles(ismember(meegFiles.fileName,dataFileNames{iFile}),:);
         cfg.trialdef.fileSpec = fileSpec;
@@ -333,7 +333,7 @@ else
     %% Baseline correction
     cfg = struct();
     cfg.demean = 'yes';
-    cfg.baselinewindow = [-0.1,0];
+    cfg.baselinewindow = [-0.2,0];
     ftDataClean = ft_preprocessing(cfg,ftDataClean);
     
     %% Interpolate bad channels and average reference in case of EEG

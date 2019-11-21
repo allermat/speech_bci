@@ -45,8 +45,9 @@ for iSub = 1:numel(subID_list)
     % cmap = [0,1,0;1,0,0;0,0,1];
     cmap2 = [77,175,74;228,26,28;55,126,184;152,78,163]./255;
     
+    nCond = numel(condSelection);
     % Plotting RSA results
-    if strcmp(analysis,'noise')
+    if ismember(analysis,{'noise_sum','noise_ws'})
         % Plotting noise
         if ismember(timeMode,'pooled')
             tickLabels = condDef.wordId(ismember(condDef.stimType,'word'));
@@ -85,65 +86,96 @@ for iSub = 1:numel(subID_list)
         
         % Target condition independent of word identity
         % Meaning of indices: 1 - N.A., 2 - within, 3 - between
-        w = 2*ones(3);
-        b = 3*ones(3);
-        models{1} = [w,b,b;b,w,b;b,b,w];
+        w = 2*ones(nCond);
+        b = 3*ones(nCond);
+        models{1} = [w,b,b,b,b,b;...
+                     b,w,b,b,b,b;...
+                     b,b,w,b,b,b;...
+                     b,b,b,w,b,b;...
+                     b,b,b,b,w,b;...
+                     b,b,b,b,b,w];
         %     figure(); image(models{1}); colormap(cmap);
         
         % Word identity independent of target condition
-        c = eye(3);
+        c = eye(nCond);
         c(c == 1) = 2;
         c(c == 0) = 3;
-        models{2} = repmat(c,3,3);
+        models{2} = repmat(c,nCond,nCond);
         %     figure(); image(models{2}); colormap(cmap);
         
         % Target condition, same word
         % Meaning of indices: 1 - N.A., 2 - within, 3 - between
-        [w,b] = deal(eye(3));
+        [w,b] = deal(eye(nCond));
         w(w == 1) = 2;
         b(b == 1) = 3;
-        models{3} = [w,b,b;b,w,b;b,b,w];
+        models{3} = [w,b,b,b,b,b;...
+                     b,w,b,b,b,b;...
+                     b,b,w,b,b,b;...
+                     b,b,b,w,b,b;...
+                     b,b,b,b,w,b;...
+                     b,b,b,b,b,w];
         %     figure(); image(models{3}); colormap(cmap);
         
         % Word identity same target condition
-        n = NaN(3);
-        models{4} = [c,n,n;n,c,n;n,n,c];
+        n = ones(nCond);
+        models{4} = [c,n,n,n,n,n;...
+                     n,c,n,n,n,n;...
+                     n,n,c,n,n,n;...
+                     n,n,n,c,n,n;...
+                     n,n,n,n,c,n;...
+                     n,n,n,n,n,c];
         %     figure(); image(models{4}); colormap(cmap);
         
         % Target condition, different word
         % Meaning of indices: 1 - N.A., 2 - within, 3 - between
-        [w,b] = deal(eye(3));
+        [w,b] = deal(eye(nCond));
         w(w == 0) = 2;
         b(b == 0) = 3;
-        models{5} = [w,b,b;b,w,b;b,b,w];
+        models{5} = [w,b,b,b,b,b;...
+                     b,w,b,b,b,b;...
+                     b,b,w,b,b,b;...
+                     b,b,b,w,b,b;...
+                     b,b,b,b,w,b;...
+                     b,b,b,b,b,w];
         %     figure(); image(models{5}); colormap(cmap);
         
         % Word identity different target condition
-        models{6} = [n,c,c;c,n,c;c,c,n];
+        models{6} = [n,c,c,c,c,c;...
+                     c,n,c,c,c,c;...
+                     c,c,n,c,c,c;...
+                     c,c,c,n,c,c;...
+                     c,c,c,c,n,c;...
+                     c,c,c,c,c,n];
         %     figure(); image(models{6}); colormap(cmap);
         
         % P3 response: 1 = N.A; 2 = +/-; 3 = -/-; 4 = +/+
-        temp = 3*ones(9);
-        temp(:,[1,5,9]) = 2;
-        temp([1,5,9],:) = 2;
-        temp([1,5,9],[1,5,9]) = 4;
+        temp = 3*ones(size(conditions,1));
+        temp(:,1:(nCond+1):size(conditions,1)) = 2;
+        temp(1:(nCond+1):size(conditions,1),:) = 2;
+        temp(1:(nCond+1):size(conditions,1),...
+             1:(nCond+1):size(conditions,1)) = 4;
         models{7} = temp;
         %     figure(); image(models{7}); colormap(cmap);
         
         % P3 | same word
         temp = models{7};
-        temp(~logical(repmat(eye(3),3,3))) = 1;
+        temp(~logical(repmat(eye(nCond),nCond,nCond))) = 1;
         models{8} = temp;
         
         % P3 | same target
-        mask = [ones(3),zeros(3),zeros(3);zeros(3),ones(3),zeros(3);zeros(3),zeros(3),ones(3)];
+        mask = [ones(nCond),repmat(zeros(nCond),1,5);...
+                zeros(nCond),ones(nCond),repmat(zeros(nCond),1,4);...
+                repmat(zeros(nCond),1,2),ones(nCond),repmat(zeros(nCond),1,3);...
+                repmat(zeros(nCond),1,3),ones(nCond),repmat(zeros(nCond),1,2);...
+                repmat(zeros(nCond),1,4),ones(nCond),zeros(nCond);...
+                repmat(zeros(nCond),1,5),ones(nCond)];
         temp = models{7};
         temp(~logical(mask)) = 1;
         models{9} = temp;
         
         % P3 | different word
         temp = models{7};
-        temp(logical(repmat(eye(3),3,3))) = 1;
+        temp(~logical(repmat(eye(nCond),nCond,nCond))) = 1;
         models{10} = temp;
         %     figure(); image(models{8}); colormap(cmap);
         
@@ -168,8 +200,9 @@ for iSub = 1:numel(subID_list)
             % Time resolved figures
             s = size(distAll);
             temp = squeeze(mat2cell(distAll,s(1),s(2),ones(s(3),1)));
-            temp_var = squeeze(mat2cell(distAll_var,s(1),s(2),ones(s(3),1)));
-            
+            if strcmp(subID,'group')
+                temp_var = squeeze(mat2cell(distAll_var,s(1),s(2),ones(s(3),1)));
+            end
             figure();
             set(gcf,'Units','Normalized','OuterPosition',[0,0.2,0.5,0.75]);
             for iModel = 1:6
@@ -256,19 +289,20 @@ for iSub = 1:numel(subID_list)
             temp = cellfun(@(x) upper(condDef.wordId{condDef.condition == x}(1)),...
                 table2cell(conditions),'UniformOutput',false);
             tickLabels = strcat(temp(:,1),'\_',temp(:,2));
-            plotRDM(mean(distAll,3),tickLabels,3);
+            plotRDM(mean(distAll,3),tickLabels,nCond);
             title(sprintf('Decoding presented word\nmean across time'));
         end
         
     elseif strcmp(analysis,'all')
         % Plotting words
         wordId = condDef.wordId;
-        wordId{end} = 'z';
+        wordId{end-1} = 'z';
+        wordId{end} = 'x';
         if ismember(timeMode,'pooled')
             temp = cellfun(@(x) upper(wordId{condDef.condition == x}(1)),...
                 table2cell(conditions),'UniformOutput',false);
             tickLabels = strcat(temp(:,1),'\_',temp(:,2));
-            plotRDM(distAll,tickLabels,4);
+            plotRDM(distAll,tickLabels,nCond);
             title(sprintf('Decoding presented word and noise\npooled over time'));
         else
             % Time resolved figure
@@ -299,7 +333,7 @@ for iSub = 1:numel(subID_list)
             temp = cellfun(@(x) upper(wordId{condDef.condition == x}(1)),...
                 table2cell(conditions),'UniformOutput',false);
             tickLabels = strcat(temp(:,1),'\_',temp(:,2));
-            plotRDM(mean(distAll,3),tickLabels,4);
+            plotRDM(mean(distAll,3),tickLabels,nCond);
             title(sprintf('Decoding presented word and noise\nmean across time'));
         end
     end

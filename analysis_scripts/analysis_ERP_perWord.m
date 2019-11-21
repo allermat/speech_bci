@@ -43,7 +43,7 @@ trialInfo.wordId = cell(size(trialInfo,1),1);
 trialInfo.wordId(:) = {''};
 % Adding wordID for each stimulus if it isn't present
 conds = condDef.condition(ismember(condDef.stimType,'word'));
-noiseCond = condDef.condition(ismember(condDef.stimType,'noise'));
+noiseCond = condDef.condition(contains(condDef.stimType,'noise'));
 for i = 1:numel(conds)
     trialInfo.wordId(trialInfo.condition == conds(i)) = ...
         condDef.wordId(condDef.condition == conds(i));

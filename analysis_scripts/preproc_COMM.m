@@ -169,6 +169,7 @@ for iFile = 1:size(sourceFileNames,1)
         cfg.artfctdef.zvalue.bpfreq = [110 140];
         cfg.artfctdef.zvalue.bpfilttype = 'but';
         cfg.artfctdef.zvalue.bpfiltord = 9;
+        cfg.artfctdef.zvalue.bpinstabilityfix = 'reduce';
         cfg.artfctdef.zvalue.hilbert = 'yes';
         % Kernel length in seconds for smoothing, it is used by
         % ft_preproc_smooth.m
