@@ -142,7 +142,7 @@ if strcmp(runMode,'compICA')
         cfg.trialfun = 'ft_trialfun_eventlocked';
         cfg.trialdef = struct();
         cfg.trialdef.prestim = 0.2;
-        cfg.trialdef.poststim = 1.2;
+        cfg.trialdef.poststim = 0.8;
         cfg.trialdef.trigdef = trigDef;
 %         cfg.trialdef.trigOffset = cat(2,trigOffset{:});
         meegFiles = s.getField(subID,'meg_files');
@@ -333,7 +333,7 @@ else
     %% Baseline correction
     cfg = struct();
     cfg.demean = 'yes';
-    cfg.baselinewindow = [-0.2,0];
+    cfg.baselinewindow = [-0.1,0];
     ftDataClean = ft_preprocessing(cfg,ftDataClean);
     
     %% Interpolate bad channels and average reference in case of EEG

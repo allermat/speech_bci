@@ -71,7 +71,7 @@ for iSub = 1:numel(subID_list)
                 plot(time, squeeze(nanmean(nanmean(distWithin, 1), 2)), 'linewidth', 2);
                 legend('Between', 'Within', 'location', 'NorthWest');
             end
-            xlim([-100 500]);
+            % xlim([-100 500]);
             xlabel('Time [ms]');
             ylabel('Crossnobis distance');
             title(sprintf('Decoding target word from noise\ntime resolved'));
@@ -175,7 +175,7 @@ for iSub = 1:numel(subID_list)
         
         % P3 | different word
         temp = models{7};
-        temp(~logical(repmat(eye(nCond),nCond,nCond))) = 1;
+        temp(logical(repmat(eye(nCond),nCond,nCond))) = 1;
         models{10} = temp;
         %     figure(); image(models{8}); colormap(cmap);
         
@@ -230,7 +230,7 @@ for iSub = 1:numel(subID_list)
                         legend('Between', 'Within', 'location', 'SouthEast');
                     end
                 end
-                xlim([-100 500]);
+                % xlim([-100 500]);
                 xlabel('Time [ms]');
                 ylabel('Crossnobis distance');
                 title(titles{iModel});
@@ -269,7 +269,7 @@ for iSub = 1:numel(subID_list)
                                'location','SouthEast');
                     end
                 end
-                xlim([-100 500]);
+                % xlim([-100 500]);
                 xlabel('Time [ms]');
                 ylabel('Crossnobis distance');
                 title(titles{iModel});
@@ -322,7 +322,7 @@ for iSub = 1:numel(subID_list)
                 plot(time, squeeze(nanmean(nanmean(distWithin, 1), 2)), 'linewidth', 2);
                 legend('Between', 'Within', 'location', 'NorthWest');
             end
-            xlim([-100 500]);
+            % xlim([-100 500]);
             xlabel('Time [ms]');
             ylabel('Crossnobis distance');
             

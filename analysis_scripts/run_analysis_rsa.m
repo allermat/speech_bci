@@ -1,6 +1,6 @@
 clearvars; 
 % Defining parameters
-subID = {'meg19_0397'};
+subID = {'meg19_0378','meg19_0382','meg19_0397'};
 analysis = {'noise_sum','noise_ws','words','all'};
 % analysis = {'words'};
 % channel = {'all','megplanar'};
