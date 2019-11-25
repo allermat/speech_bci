@@ -126,12 +126,12 @@ switch stimulusType
         nRepetitionMinimum = 8;
     case 'non-pcentred_pilot_2_1'
         inputDir = fullfile(BCI_setupdir('stimuli'),'non-pcentred_pilot_2','uniform');
-        filesWords = {'yes.wav'
+        filesWords = sort({'yes.wav'
                       'no.wav'
                       'help.wav'
                       'pain.wav'
                       'left.wav'
-                      'right.wav'};
+                      'right.wav'});
         switch noiseWordSelection
             case {'rand10','rand50','rand100'}
                 error('This option is not implemented! ');
@@ -148,12 +148,12 @@ switch stimulusType
         nRepetitionMinimum = 8;
     case 'non-pcentred_pilot_2_2'
         inputDir = fullfile(BCI_setupdir('stimuli'),'non-pcentred_pilot_2','uniform');
-        filesWords = {'yes.wav'
+        filesWords = sort({'yes.wav'
                       'no.wav'
                       'help.wav'
                       'pain.wav'
                       'hot.wav'
-                      'cold.wav'};
+                      'cold.wav'});
         switch noiseWordSelection
             case {'rand10','rand50','rand100'}
                 error('This option is not implemented! ');
