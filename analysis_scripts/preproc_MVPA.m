@@ -142,7 +142,7 @@ if strcmp(runMode,'compICA')
         cfg.trialfun = 'ft_trialfun_eventlocked';
         cfg.trialdef = struct();
         cfg.trialdef.prestim = 0.1;
-        cfg.trialdef.poststim = 0.5;
+        cfg.trialdef.poststim = 0.625;
         cfg.trialdef.trigdef = trigDef;
         cfg.trialdef.trigOffset = cat(2,trigOffset{:});
         meegFiles = s.getField(subID,'meg_files');

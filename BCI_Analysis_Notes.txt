@@ -1,4 +1,4 @@
-Speech-BCI Analysis Notes
+    Speech-BCI Analysis Notes
 =========================
 
 Notes by subject
