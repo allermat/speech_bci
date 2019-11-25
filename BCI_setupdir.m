@@ -44,7 +44,7 @@ if isnumeric(subID)
     subID = num2str(subID);
 end
 %% Setting up the basic directories if necessary. 
-expStage = 'pilot_2';
+expStage = 'pilot_3';
 
 [~,setupID] = system('hostname');
 setupID = regexp(setupID,'[\w -]*','match');
