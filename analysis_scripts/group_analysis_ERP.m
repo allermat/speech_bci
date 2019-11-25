@@ -1,14 +1,32 @@
-function group_analysis_ERP()
+function group_analysis_ERP(varargin)
 % Group level grand average ERPs
+
+% Parsing input, checking matlab
+p = inputParser;
+
+validModalities = {'meg','eeg'};
+
+addOptional(p,'modality','meg',@(x) ismember(x,validModalities));
+
+parse(p,varargin{:});
+
+modality = p.Results.modality;
+
+if strcmp(modality,'eeg')
+    fileTag = 'fteeg';
+    dirID = 'analysis_eeg_sub_erp';
+else
+    fileTag = 'ftmeg';
+    dirID = 'analysis_meg_sub_erp';
+end
 
 s = subjSpec;
 subjList = sort({s.subjInfo.subID})';
 
-ftFilesToAvg = cell(size(subjList));
-matchStrTokens = 'fteeg_ERP_meg[0-9]{2}_[0-9]{4}(.*).mat';
+matchStrTokens = [fileTag,'_ERP_meg[0-9]{2}_[0-9]{4}(.*).mat'];
 
 % Finding match strings for conditions
-saveDf = cd(BCI_setupdir('analysis_eeg_sub_erp',subjList{1}));
+saveDf = cd(BCI_setupdir(dirID,subjList{1}));
 fileList = dir;
 fileList = {fileList.name}';
 cd(saveDf);
@@ -19,20 +37,22 @@ matchStrConds = [temp{:}]';
 
 for i = 1:size(matchStrConds,1)
     
+    ftFilesToAvg = cell(size(subjList));
+    
     for j = 1:size(subjList,1)
         
-        saveDf = cd(BCI_setupdir('analysis_eeg_sub_erp',subjList{j}));
+        saveDf = cd(BCI_setupdir(dirID,subjList{j}));
         fileList = dir;
         fileList = {fileList.name}';
         matchID = ~cellfun(@isempty,regexp(fileList,...
-            ['fteeg_ERP_meg[0-9]{2}_[0-9]{4}',matchStrConds{i},'.mat']));
+            [fileTag,'_ERP_meg[0-9]{2}_[0-9]{4}',matchStrConds{i},'.mat']));
         
         if sum(matchID) == 0
-            warning('No file, skipping this subject! ');
+            warning('No file, skipping subject %s! ',subjList{j});
             cd(saveDf);
             continue;
         elseif sum(matchID) > 1
-            warning('Multiple files, skipping this subject! ');
+            warning('Multiple files, skipping subject %s! ',subjList{j});
             cd(saveDf);
             continue;
         else
@@ -53,8 +73,8 @@ for i = 1:size(matchStrConds,1)
     ftDataGrAvg.cfg.previous = [];
     % Saving data
     fprintf('\n\nSaving data...\n\n');
-    fileName = ['fteeg_ERP_group',matchStrConds{i},'.mat'];
-    savePath = fullfile(BCI_setupdir('analysis_eeg_sub_erp','group'),fileName);
+    fileName = [fileTag,'_ERP_group',matchStrConds{i},'.mat'];
+    savePath = fullfile(BCI_setupdir(dirID,'group'),fileName);
     save(savePath,'ftDataGrAvg','-v7.3');
         
 end
