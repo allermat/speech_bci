@@ -54,37 +54,19 @@ end
 % Debugging mode
 debugMode = 0;
  
-% Add a practice mode with 1 run only but in the scanner
-if syncMode
-    nRuns = 1;
-    nTrialsPerRun = 1;
-elseif devMode
-    if isPractice
-        nRuns = 1;
-        nTrialsPerRun = 1;
-    else
-        nRuns = 6;
-        nTrialsPerRun = 1;
-    end
-else
-    if isPractice
-        nRuns = 6;
-        nTrialsPerRun = 1;
-    else
-        nRuns = 6;
-        nTrialsPerRun = 12;
-    end
-end
+% Sound device settings
 fs = 44100;
 nrchannels = 2;
-wordFreq = 1.6; % Frequency of words in stimulus in Hz
 
 %% setting up experiment environment
 % always needs to be put if using KbName!!!!!
 KbName('UnifyKeyNames');
 
 % to exit the program
-quit = KbName('ESCAPE');
+quitKey = KbName('ESCAPE');
+aKey = KbName('a');
+sKey = KbName('s');
+dKey = KbName('d');
 
 %% Preload sound files into matlab workspace
 if syncMode
@@ -94,39 +76,34 @@ if syncMode
     stimDuration = 0.5;
     noise = cat(1,randn(round(fs*noiseDuration),nStim),...
                 zeros(round(fs*(stimDuration-noiseDuration)),nStim));
-    stimAll = {noise(:)'};
-    stimKeyAll = {ones(1,nStim)};
-    stimDurAll = {stimDuration*ones(1,nStim)};
-    targetWordsAll = {'yes'};
-    nTargetsAll = 12;
-elseif devMode
-    if isPractice
-        % Full path to the file containing the stimuli
-        filePath = fullfile(BCI_setupdir('data_behav_sub',subjectId),'stim_pract.mat');
-        load(filePath,'stimAll','stimKeyAll','stimDurAll','targetWordsAll','nTargetsAll');
-    else
-        [stimAll,stimKeyAll,stimDurAll,targetWordsAll,nTargetsAll] = ...
-            BCI_generateAllStimuli(subjectId,'nRuns',nRuns,'nTrialsPerRun', ...
-                                   nTrialsPerRun,'randSeed',sCurr.Seed,...
-                                   'saveFile',false);
-    end
+    stimActRun = {noise(:)'};
+    stimKeyActRun = {ones(1,nStim)};
+    stimDurActRun = {stimDuration*ones(1,nStim)};
+    targetWordsActRun = {'yes'};
+    nTargetsActRun = 12;
+    
+    nTrialsPerRun = 1;
 else
     if isPractice
         % Full path to the file containing the stimuli
         filePath = fullfile(BCI_setupdir('data_behav_sub',subjectId),'stim_pract.mat');
-        load(filePath,'stimAll','stimKeyAll','stimDurAll','targetWordsAll','nTargetsAll');
     else
-        % Full path to the file containing the stimuli
         filePath = fullfile(BCI_setupdir('data_behav_sub',subjectId),'stim.mat');
-        load(filePath,'stimAll','stimKeyAll','stimDurAll','targetWordsAll','nTargetsAll');
     end
+    % Load data as a matfile object, this makes partial loading possible
+    % which is faster than loading the whole file. 
+    mStim = matfile(filePath);
+    stimActRun = mStim.stimAll(iRun,:);
+    stimKeyActRun = mStim.stimKeyAll(iRun,:);
+    stimDurActRun = mStim.stimDurAll(iRun,:);
+    targetWordsActRun = mStim.targetWordsAll(iRun,:);
+    nTargetsActRun = mStim.nTargetsAll(iRun,:);
+    nTrialsPerRun = size(stimActRun,2);
 end
-
-
 
 %% Setting up variables
 [tStartSound,tEndSound,responses] = deal(NaN(nTrialsPerRun,1));
-correctResponses = nTargetsAll(iRun,:);
+correctResponses = nTargetsActRun;
 abort = false; % flag for aborting the run
 
 try
@@ -160,14 +137,14 @@ try
         
         % Check for quitting
         [~,~,keyCode] = KbCheck;
-        if keyCode(quit)
+        if keyCode(quitKey)
             break;
         end
         % Select sound for current trial and extract stim info from sound filename
-        targetWordCurrent = targetWordsAll{iRun,iTrial};
-        audioCurrent = repmat(stimAll{iRun,iTrial},2,1);
-        stimTriggerCurrent = stimKeyAll{iRun,iTrial};
-        stimTriggerWaitTimeCurrent = cumsum(stimDurAll{iRun,iTrial});
+        targetWordCurrent = targetWordsActRun{iTrial};
+        audioCurrent = repmat(stimActRun{iTrial},2,1);
+        stimTriggerCurrent = stimKeyActRun{iTrial};
+        stimTriggerWaitTimeCurrent = cumsum(stimDurActRun{iTrial});
         
         % Display target word
         if ~syncMode
@@ -175,6 +152,7 @@ try
         else
             DrawFormattedText(window, '+', 'center', 'center', black);
         end
+        respTrig = NaN;
         Screen('Flip', window);
         MEG.SendTrigger(10);
         WaitSecs(0.01);
@@ -199,7 +177,7 @@ try
             
             % Check for quitting
             [~,~,keyCode] = KbCheck;
-            if keyCode(quit)
+            if keyCode(quitKey)
                 abort = true;
                 break;
             end
@@ -210,40 +188,81 @@ try
         
         if ~abort
             % Present question
-            txt = sprintf('How many targets\ndid you count?\n8(Y)   9(G)   10(R)');
+            txt = sprintf('How many targets\ndid you count?\n10(Y)   12(G)   14(R)');
             DrawFormattedText(window, txt, 'center', 'center', black);
             Screen('Flip', window);
             % Send trigger to indicate the onset of the response screen
             MEG.SendTrigger(13);
             WaitSecs(0.01);
             MEG.SendTrigger(0);
-            % Wait for response here for 10 seconds, then go on
-            MEG.ResetClock;
-            MEG.WaitForButtonPress(10,whichButton);
-            buttonPressed = MEG.LastButtonPress;
-            if ~isempty(buttonPressed)
-                % Reset screen
-                Screen('FillRect',window,grey,windowRect);
-                Screen('Flip', window);
-                % Log response (we don't care about multiple presses here) the
-                % responded repetition numbers are 10 for button 3, 11 for 4 and 12
-                % for 5, so I just add 7 the the buttonPressed variable to get
-                % the values
-                switch buttonPressed{1}
-                    case 'RY', respCurrent = 8;
-                    case 'RG', respCurrent = 9;
-                    case 'RR', respCurrent = 10;
-                    otherwise, respCurrent = 0;
+            if devMode
+                % Wait for response here for 10 seconds, then go on
+                [~,keyCode] = KbWait([],[],GetSecs+10);
+                if any(keyCode)
+                    if keyCode(aKey)
+                        respTrig = 20;
+                        respCurrent = 10;
+                    elseif keyCode(sKey)
+                        respTrig = 21;
+                        respCurrent = 12;
+                    elseif keyCode(dKey)
+                        respTrig = 22;
+                        respCurrent = 14;
+                    else
+                        respTrig = 23;
+                        respCurrent = 0;
+                    end
+                    if ~isnan(respTrig)
+                        % Send response trigger
+                        MEG.SendTrigger(respTrig);
+                        WaitSecs(0.01);
+                        MEG.SendTrigger(0)
+                    end
+                else
+                    respCurrent = NaN;
                 end
-                % Send response trigger
-                MEG.SendTrigger(10+respCurrent);
-                WaitSecs(0.01);
-                MEG.SendTrigger(0)
             else
-                respCurrent = NaN;
+                % Wait for response here for 10 seconds, then go on
+                MEG.ResetClock;
+                MEG.WaitForButtonPress(10,whichButton);
+                buttonPressed = MEG.LastButtonPress;
+                if ~isempty(buttonPressed)
+                    
+                    % Log response (we don't care about multiple presses here) the
+                    % responded repetition numbers are 10 for button 3, 11 for 4 and 12
+                    % for 5, so I just add 7 the the buttonPressed variable to get
+                    % the values
+                    switch buttonPressed{1}
+                        case 'RY'
+                            respTrig = 20;
+                            respCurrent = 10;
+                        case 'RG'
+                            respTrig = 21;
+                            respCurrent = 12;
+                        case 'RR'
+                            respTrig = 22;
+                            respCurrent = 14;
+                        otherwise
+                            respTrig = 23;
+                            respCurrent = 0;
+                    end
+                    if ~isnan(respTrig)
+                        % Send response trigger
+                        MEG.SendTrigger(respTrig);
+                        WaitSecs(0.01);
+                        MEG.SendTrigger(0)
+                    end
+                else
+                    respCurrent = NaN;
+                end
             end
             
+            % Save response
             responses(iTrial) = respCurrent;
+            
+            % Reset screen
+            Screen('FillRect',window,grey,windowRect);
+            Screen('Flip', window);
             
             % Send trigger to indicate the end of the trial
             WaitSecs(0.2);
@@ -278,7 +297,7 @@ try
                     'Target_word','Response','Correct_response'};
     data = table(repmat({subjectId},nTrialsPerRun,1),repmat(iRun,nTrialsPerRun,1),...
                  (1:nTrialsPerRun)',tStartSound,tEndSound,... 
-                 targetWordsAll(iRun,:)',responses,correctResponses',...
+                 targetWordsActRun',responses,correctResponses',...
                  'VariableNames',dataVarNames);
     % Saving experiment data
     if isPractice

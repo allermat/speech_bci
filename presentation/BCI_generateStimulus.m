@@ -3,8 +3,8 @@ function [stim,stimKey,stimDuration] = BCI_generateStimulus(S)
 p = inputParser;
 
 fieldsReqS = {'audioNoise','audioWords','wordsLoaded','jitter','prestim','nCh',...
-              'nNoiseStimuli','nRepetitionPerWord','nTargets',...
-              'noiseLpCutoff','targetKey','nRepetitionMinimum','wordKey',...
+              'nNoiseStimuli','nTargets','nRepetitionNonTarget',...
+              'noiseLpCutoff','targetKey','wordKey',...
               'randSelect'};
 
 checkS = @(x) all(isfield(x,fieldsReqS));
@@ -20,12 +20,11 @@ audioNoise = S.audioNoise;
 audioWords = S.audioWords;
 wordsLoaded = S.wordsLoaded;
 vocodeMethod = S.vocodeMethod;
-jit cter = S.jitter;
+jitter = S.jitter;
 prestim = S.prestim;
 nCh = S.nCh;
 nNoiseStimuli = S.nNoiseStimuli;
-nRepetitionPerWord = S.nRepetitionPerWord;
-% nRepetitionMinimum = S.nRepetitionMinimum;
+nRepetitionNonTarget = S.nRepetitionNonTarget;
 wordKey = S.wordKey;
 uniqueWords = unique(wordsLoaded);
 randSelect = S.randSelect;
@@ -105,13 +104,9 @@ for i = 1:nNoiseStimuli
 end
 
 % Vocode words
-wordKeysAll = repmat(wordKey,nRepetitionPerWord,1);
-wordKeysAll = wordKeysAll(:);
-% Adding instances of target word if necessary
-if S.nTargets > nRepetitionPerWord
-    nToAdd = S.nTargets-nRepetitionPerWord;
-    wordKeysAll = cat(1,wordKeysAll,repmat(S.targetKey,nToAdd,1));
-end
+wordKeysAll = repmat(S.targetKey,S.nTargets,1);
+wordKeyTmp = wordKey(~ismember(wordKey,S.targetKey));
+wordKeysAll = cat(1,wordKeysAll,repmat(wordKeyTmp',nRepetitionNonTarget,1));
 wordsAll = cell(size(wordKeysAll));
 
 for iWord = 1:numel(wordsAll)
@@ -133,38 +128,10 @@ for iWord = 1:numel(wordsAll)
     end
 end
 
-% Devide targ into two subparts and randomize separately
-% stim_1 = wordsAll(1:nRepetitionMinimum,:);
-% stim_1 = stim_1(:);
-% stim_1 = cat(1,stim_1,cat(1,noise(1:nRepetitionMinimum*nUniqueWords)));
-% stimKey_1 = wordKeysAll(1:nRepetitionMinimum,:);
-% stimKey_1 = stimKey_1(:);
-% stimKey_1 = cat(1,stimKey_1,cat(1,noiseKey*ones(nRepetitionMinimum*nUniqueWords,1)));
-% randVector = randperm(size(stim_1,1));
-% stim_1 = stim_1(randVector);
-% stimKey_1 = stimKey_1(randVector);
-% 
-% stim_2 = wordsAll(nRepetitionMinimum+1:end,:);
-% stim_2 = stim_2(:);
-% stim_2 = cat(1,stim_2,cat(1,noise(nRepetitionMinimum*nUniqueWords+1:end)));
-% stimKey_2 = wordKeysAll(nRepetitionMinimum+1:end,:);
-% stimKey_2 = stimKey_2(:);
-% stimKey_2 = cat(1,stimKey_2,...
-%                 cat(1,noiseKey*ones(nNoiseStimuli-nRepetitionMinimum*nUniqueWords,1)));
-% randVector = randperm(size(stim_2,1));
-% stim_2 = stim_2(randVector);
-% stimKey_2 = stimKey_2(randVector);
-% % Removing instances of target word if necessary
-% if S.nTargets < S.nRepetitionPerWord
-%     nToRemove = S.nRepetitionPerWord-S.nTargets;
-%     idx = find(ismember(stimKey_2,S.targetKey));
-%     stim_2(idx(1:nToRemove)) = [];
-%     stimKey_2(idx(1:nToRemove)) = [];
-% end
-
 stim = cat(1,wordsAll,noise);
 stimKey = cat(1,wordKeysAll,noiseKeysAll);
-randVector = pseudorandomize_stimuli(stimKey);
+% randVector = pseudorandomize_stimuli(stimKey);
+randVector = randperm(numel(stimKey));
 stim = stim(randVector);
 stimKey = stimKey(randVector);
 stimDuration = cellfun(@(x) numel(x)/audioNoise(1).Fs,stim);
