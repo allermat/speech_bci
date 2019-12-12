@@ -1,7 +1,7 @@
 function analysis_rsa(subID,varargin)
 % Compute dissimilarity measures on MEG data
 
-validAnalyses = {'words','noise_sum','noise_ws','all'};
+validAnalyses = {'words','noise','all'};
 validTimeModes = {'resolved','pooled','movingWin'};
 p = inputParser;
 
@@ -12,6 +12,8 @@ addParameter(p,'channel','all',@(x) validateattributes(x,{'char'},{'nonempty'}))
 addParameter(p,'timeMode','resolved',@(x) ismember(x,validTimeModes));
 addParameter(p,'equalizeTargetDistance',false,...
              @(x) validateattributes(x,{'logical'},{'scalar'}));
+addParameter(p,'equalizeNtoAvg',false,...
+             @(x) validateattributes(x,{'logical'},{'scalar'}));
 
 parse(p,subID,varargin{:});
 
@@ -21,6 +23,11 @@ analysis = p.Results.analysis;
 channel = p.Results.channel;
 timeMode = p.Results.timeMode;
 equalizeTargetDistance = p.Results.equalizeTargetDistance;
+equalizeNtoAvg = p.Results.equalizeNtoAvg;
+
+if equalizeNtoAvg
+    nToAvg = 10;
+end
 
 % Loading data if necessary
 if isempty(ftData)
@@ -61,10 +68,8 @@ trialInfo.targetNum = rowfun(@(x) condDef.condition(condDef.wordId == x),...
 trialInfo.idx = (1:size(trialInfo,1))';
 
 switch analysis
-    case 'noise_sum'
-        condSelection = condDef.condition(ismember(condDef.stimType,'noise_sum'));
-    case 'noise_ws'
-        condSelection = condDef.condition(ismember(condDef.stimType,'noise_ws'));
+    case 'noise'
+        condSelection = condDef.condition(ismember(condDef.stimType,'noise'));
     case 'words'
         condSelection = condDef.condition(ismember(condDef.stimType,'word'));
     case 'all'
@@ -80,22 +85,56 @@ if strcmp(analysis,'all')
 end
 data = {};
 labels = [];
+nStimAvg = [];
 for iCond = 1:size(conditions,1)
     actCondIdx = ismember(stimIdx(:,{'targetNum','condition'}),conditions(iCond,:));
     uniqueTrials = unique(stimIdx(actCondIdx,{'iRun','iTrialInRun'}),'rows');
     tempData = cell(size(uniqueTrials,1),1);
-    tempCond = NaN(size(uniqueTrials,1),1);
+    [tempCond,tempNstimAvg] = deal(NaN(size(uniqueTrials,1),1));
     for iTrial = 1:size(uniqueTrials,1)
         actSelection = stimIdx.Fun_idx(actCondIdx & ...
-            ismember(stimIdx(:,{'iRun','iTrialInRun'}),...
-            uniqueTrials(iTrial,:)));
-        temp = megData(actSelection);
-        tempData{iTrial} = mean(cat(3,temp{:}),3);
-        tempCond(iTrial) = iCond;
+                           ismember(stimIdx(:,{'iRun','iTrialInRun'}),...
+                           uniqueTrials(iTrial,:)));
+        if equalizeNtoAvg
+            % Average exactly nToAvg stimuli and get rid of the trial if it
+            % has less than that amount of stimuli
+            if numel(actSelection) >= nToAvg
+                temp = megData(actSelection(randsample(1:numel(actSelection),nToAvg)));
+                tempData{iTrial} = mean(cat(3,temp{:}),3);
+                tempCond(iTrial) = iCond;
+                tempNstimAvg(iTrial) = numel(actSelection);
+            end
+        else
+            % Average all available stimuli in each trial
+            temp = megData(actSelection);
+            tempData{iTrial} = mean(cat(3,temp{:}),3);
+            tempCond(iTrial) = iCond;
+            tempNstimAvg(iTrial) = numel(actSelection);
+        end
     end
-    data = cat(1,data,tempData);
-    labels = cat(1,labels,tempCond);
+        
+    data = cat(1,data,tempData(~isnan(tempNstimAvg)));
+    labels = cat(1,labels,tempCond(~isnan(tempNstimAvg)));
+    nStimAvg = cat(1,nStimAvg,tempNstimAvg(~isnan(tempNstimAvg)));
 end
+
+% Make sure there are even number of averaged trials and they are equal
+% across conditions
+nTrialsPerCond = histcounts(labels,'BinMethod','integers');
+nToKeep = min(nTrialsPerCond);
+if mod(nToKeep,2) == 1
+    nToKeep = nToKeep-1;
+end
+uniqueLabels = unique(labels);
+for i = 1:numel(uniqueLabels)
+    % Removing surplus trials
+    actIdx = find(labels == uniqueLabels(i));
+    idxToRemove = actIdx(randsample(1:numel(actIdx),numel(actIdx)-nToKeep));
+    data(idxToRemove) = [];
+    labels(idxToRemove) = [];
+    nStimAvg(idxToRemove) = [];
+end
+% Reshaping data to fit subsequent analysis better
 data = shiftdim(cat(3,data{:}),2);
 
 switch timeMode

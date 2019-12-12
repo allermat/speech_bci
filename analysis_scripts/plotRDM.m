@@ -2,7 +2,7 @@ function plotRDM(RDM,tickLabels,grid)
 
 % Average across time figure
 figure();
-set(gcf,'Units','Normalized','OuterPosition',[0,0.2,0.6,0.85]);
+% set(gcf,'Units','Normalized','OuterPosition',[0,0.2,0.6,0.85]);
 imagesc(RDM);
 colormap(magma);
 c = colorbar;

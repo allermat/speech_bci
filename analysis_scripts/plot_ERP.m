@@ -26,7 +26,7 @@ for iSub = 1:numel(subID)
         fileStem = 'fteeg_ERP';
     end
     
-    matchStr = {'all_nontarg','all_targ','noise_sum','noise_ws','all_words'};
+    matchStr = {'all_targ','noise','all_words'};
 %     matchStr = {'yes_nontarg','yes_targ','noise','all_words'};
     for iStr = 1:numel(matchStr)
         load(fullfile(sourceDir, ...
@@ -48,8 +48,8 @@ for iSub = 1:numel(subID)
     end
 %     figure(); ft_multiplotER(cfg,ftDataToPlot.yes_targ,ftDataToPlot.yes_nontarg)
     figure('units','normalized','outerposition',[0 0 0.6 0.8]);
-    ft_multiplotER(cfg,ftDataToPlot.all_targ,ftDataToPlot.all_nontarg)
-    title('Target vs. non-target');
+    ft_multiplotER(cfg,ftDataToPlot.all_targ,ftDataToPlot.noise)
+    title('Target vs. noise');
     
     cfg1 = struct();
     cfg1.operation = 'subtract';
@@ -58,16 +58,15 @@ for iSub = 1:numel(subID)
     else
         cfg1.parameter = 'avg';
     end
-    diff_targ_nontarg = ft_math(cfg1,ftDataToPlot.all_targ,ftDataToPlot.all_nontarg);
+    diff_targ_nontarg = ft_math(cfg1,ftDataToPlot.all_targ,ftDataToPlot.noise);
     figure('units','normalized','outerposition',[0 0 0.6 0.8]);
     ft_multiplotER(cfg,diff_targ_nontarg);
-    title('Target minus non-target');
+    title('Target minus noise');
     
     % figure(); ft_multiplotER(cfg,ftDataAvg_targ,ftDataAvg_nontarg_noise)
     % title('Target vs. non-target (with noise)');
     figure('units','normalized','outerposition',[0 0 0.6 0.8]);
-    ft_multiplotER(cfg,ftDataToPlot.all_words,ftDataToPlot.noise_sum,...
-                             ftDataToPlot.noise_ws)
+    ft_multiplotER(cfg,ftDataToPlot.all_words,ftDataToPlot.noise)
     title('Words vs. noise');
     
     cfg1 = struct();
@@ -77,10 +76,10 @@ for iSub = 1:numel(subID)
     else
         cfg1.parameter = 'avg';
     end
-    diff_words_noisesum = ft_math(cfg1,ftDataToPlot.all_words,ftDataToPlot.noise_sum);
+    diff_words_noisesum = ft_math(cfg1,ftDataToPlot.all_words,ftDataToPlot.noise);
     figure('units','normalized','outerposition',[0 0 0.6 0.8]);
     ft_multiplotER(cfg,diff_words_noisesum);
-    title('Words minus noise\_sum');
+    title('Words minus noise');
     
     cfg1 = struct();
     cfg1.operation = 'subtract';
@@ -89,22 +88,10 @@ for iSub = 1:numel(subID)
     else
         cfg1.parameter = 'avg';
     end
-    diff_noisesum_words = ft_math(cfg1,ftDataToPlot.noise_sum,ftDataToPlot.all_words);
-    figure('units','normalized','outerposition',[0 0 0.6 0.8]);
-    ft_multiplotER(cfg,diff_noisesum_words);
-    title('Noise\_sum minus words');
-    
-    cfg1 = struct();
-    cfg1.operation = 'subtract';
-    if strcmp(subID,'group')
-        cfg1.parameter = 'individual';
-    else
-        cfg1.parameter = 'avg';
-    end
-    diff_noisews_words = ft_math(cfg1,ftDataToPlot.noise_ws,ftDataToPlot.all_words);
+    diff_noisews_words = ft_math(cfg1,ftDataToPlot.noise,ftDataToPlot.all_words);
     figure('units','normalized','outerposition',[0 0 0.6 0.8]);
     ft_multiplotER(cfg,diff_noisews_words);
-    title('Noise\_ws minus words');
+    title('Noise minus words');
     
     % ftDataAvg_targ_vs_nontarg = ftDataAvg_targ;
     % ftDataAvg_targ_vs_nontarg.avg = ftDataAvg_targ.avg-ftDataAvg_nontarg.avg;
@@ -113,15 +100,9 @@ for iSub = 1:numel(subID)
     if strcmp(modality,'eeg')
         % Channel clusters
         cfg = struct();
-        cfg.legend = {'target','non-target'};
-        cfg.titleStr = 'Target vs non-target';
-        plotERPperChannels(cfg,ftDataToPlot.all_targ,ftDataToPlot.all_nontarg);
-        
-        cfg = struct();
-        cfg.legend = {'words','noise\_sum','noise\_ws'};
-        cfg.titleStr = 'Words vs noise';
-        plotERPperChannels(cfg,ftDataToPlot.all_words,ftDataToPlot.noise_sum,...
-                           ftDataToPlot.noise_ws);
+        cfg.legend = {'target','noise'};
+        cfg.titleStr = 'Target vs noise';
+        plotERPperChannels(cfg,ftDataToPlot.all_targ,ftDataToPlot.noise);
     end
 end
 

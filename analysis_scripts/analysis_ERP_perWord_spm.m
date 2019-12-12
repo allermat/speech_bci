@@ -95,42 +95,6 @@ for iCond = 1:size(conds,1)
     
     ftDataAvg = [];
     
-    %% Non-target words
-    condTag = [actWordId,'_nontarg'];
-    cfg = struct();
-    % Selecting good trials belonging to the actual condition
-    cfg.trials = ismember(trialInfo.condition,actCond) & ...
-                 ~ismember(trialInfo.target,actWordId) & ...
-                 trialInfo.badTrials == 0;
-    nActTrials = sum(cfg.trials);
-    ftDataToAvg = ft_selectdata(cfg,ftDataClean);
-    D = spm_eeg_ft2spm(ftDataToAvg,fullfile(destDir,'temp.mat'));
-    D = D.conditions(1:nActTrials,repmat({condTag},1,nActTrials));
-    
-    S = struct();
-    S.D = D;
-    S.robust.ks = 3;
-    S.robust.bycondition = true;
-    S.robust.savew = false;
-    S.robust.removebad = false;
-    S.circularise = false;
-    S.prefix = 'm';
-    Dnew = spm_eeg_average(S);
-    % Delete intermediate file
-    D.delete;
-    D = [];
-    % % Rename result file
-    % Dnew = move(Dnew,fullfile(destDir,[fileStem,subID,'_',condTag,'.mat']));
-    ftDataAvg = Dnew.fttimelock;
-    Dnew.delete;
-    Dnew = [];
-    % Saving data
-    fprintf('\n\nSaving data...\n\n');
-    savePath = fullfile(destDir,[fileStem,subID,'_',condTag,'.mat']);
-    save(savePath,'ftDataAvg','-v7.3');
-    
-    ftDataAvg = [];
-    
 end
 
 %% All words
@@ -204,13 +168,13 @@ save(savePath,'ftDataAvg','-v7.3');
 
 ftDataAvg = [];
 
-%% Non-target words
-condTag = 'all_nontarg';
+%% Noise
+
+condTag = 'noise';
 cfg = struct();
 % Selecting good trials belonging to the actual condition
-cfg.trials = ismember(trialInfo.condition,conds) & ... % Only words, no noise
-             ~strcmp(trialInfo.wordId,trialInfo.target) & ... % Only non-targets
-             trialInfo.badTrials == 0; % Only good data
+cfg.trials = ismember(trialInfo.condition,noiseCond) & ... % Only noise
+    trialInfo.badTrials == 0; % Only good data
 nActTrials = sum(cfg.trials);
 ftDataToAvg = ft_selectdata(cfg,ftDataClean);
 D = spm_eeg_ft2spm(ftDataToAvg,fullfile(destDir,'temp.mat'));
@@ -240,60 +204,6 @@ save(savePath,'ftDataAvg','-v7.3');
 
 ftDataAvg = [];
 
-%% Non-target words plus noise
-% cfg = struct();
-% % Selecting good trials belonging to the actual condition
-% cfg.trials = ~strcmp(trialInfo.wordId,trialInfo.target) & ... % Only non-target words and noise
-%              trialInfo.badTrials == 0; % Only good data
-% ftDataToAvg = ft_timelockanalysis(cfg,ftDataClean);
-% % Getting rid of unnecesary previous cfgs
-% ftDataToAvg.cfg.previous = [];
-% condTag = 'all_nontarg_noise';
-% 
-% % Saving data
-% fprintf('\n\nSaving data...\n\n');
-% savePath = fullfile(destDir,[fileStem,subID,'_',condTag,'.mat']);
-% save(savePath,'ftDataAvg','-v7.3');
-% 
-% ftDataToAvg = [];
 
-%% Noise
-noiseTypes = {'noise_sum','noise_ws'};
-for i = 1:numel(noiseTypes)
-    condTag = noiseTypes{i};
-    cfg = struct();
-    % Selecting good trials belonging to the actual condition
-    cfg.trials = ismember(trialInfo.condition,noiseCond(i)) & ... % Only noise
-        trialInfo.badTrials == 0; % Only good data
-    nActTrials = sum(cfg.trials);
-    ftDataToAvg = ft_selectdata(cfg,ftDataClean);
-    D = spm_eeg_ft2spm(ftDataToAvg,fullfile(destDir,'temp.mat'));
-    D = D.conditions(1:nActTrials,repmat({condTag},1,nActTrials));
-    
-    S = struct();
-    S.D = D;
-    S.robust.ks = 3;
-    S.robust.bycondition = true;
-    S.robust.savew = false;
-    S.robust.removebad = false;
-    S.circularise = false;
-    S.prefix = 'm';
-    Dnew = spm_eeg_average(S);
-    % Delete intermediate file
-    D.delete;
-    D = [];
-    % % Rename result file
-    % Dnew = move(Dnew,fullfile(destDir,[fileStem,subID,'_',condTag,'.mat']));
-    ftDataAvg = Dnew.fttimelock;
-    Dnew.delete;
-    Dnew = [];
-    % Saving data
-    fprintf('\n\nSaving data...\n\n');
-    savePath = fullfile(destDir,[fileStem,subID,'_',condTag,'.mat']);
-    save(savePath,'ftDataAvg','-v7.3');
-    
-    ftDataAvg = [];
-    
-end
 
 end

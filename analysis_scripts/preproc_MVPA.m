@@ -237,7 +237,11 @@ if strcmp(runMode,'compICA')
         % filter the data at higher frequency (1 Hz) before starting it the
         % unmixing marix can then also be applied to the original data
         cfg = struct();
-        cfg.channel = modality_ica{iMod};
+        if strcmp(modality_ica{iMod},'eeg')
+            cfg.channel = 'all';
+        else
+            cfg.channel = modality_ica{iMod};
+        end
         cfg.hpfilter = 'yes';
         cfg.hpfreq = 1;
         cfg.hpfiltord = 4;
@@ -296,7 +300,11 @@ else
             % This is a workaround as I don't have the CBU specific layout
             % file. 
             cfg.elec = ftDataMerged.elec;
-            cfg = ft_databrowser(cfg, rmfield(ftData_IC{iMod},'grad'));
+            if isfield(ftData_IC{iMod},'grad')
+                cfg = ft_databrowser(cfg,rmfield(ftData_IC{iMod},'grad'));
+            else
+                cfg = ft_databrowser(cfg,ftData_IC{iMod});
+            end
         end
         
         % Reject ICA components
@@ -308,7 +316,11 @@ else
         
         % Select actual channel modality from original data
         cfg = struct();
-        cfg.channel = modality_ica{iMod};
+        if strcmp(modality_ica{iMod},'eeg')
+            cfg.channel = 'all';
+        else
+            cfg.channel = modality_ica{iMod};
+        end
         ftDataOrig = ft_selectdata(cfg,ftDataMerged);
         
         % Decompose the original data using the computed unmixing matrix

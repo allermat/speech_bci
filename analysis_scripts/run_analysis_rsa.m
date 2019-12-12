@@ -1,8 +1,9 @@
 clearvars; 
 % Defining parameters
-subID = {'meg19_0378','meg19_0382','meg19_0397'};
-analysis = {'noise_sum','noise_ws','words','all'};
-% analysis = {'words'};
+subID = {'meg19_0428','meg19_0432','meg19_0436','meg19_0439'};
+% subID = {'meg19_0439'};
+analysis = {'noise','words','all'};
+% analysis = {'words','all'};
 % channel = {'all','megplanar'};
 channel = {'all'};
 % timeMode = {'resolved','pooled','movingWin'};
@@ -20,7 +21,7 @@ for iSub = 1:numel(subID)
                              'analysis',analysis{iAnal},...
                              'channel',channel{iChan},...
                              'timeMode',timeMode{iTimeMode},...
-                             'equalizeTargetDistance',false);
+                             'equalizeNtoAvg',true);
             end
         end
     end

@@ -269,8 +269,8 @@ for g = 1:length(groups)
                 for r = 1:length(runs{e})
 
                     %raw_file = dir(fullfile(dat_wd,cbu_codes{g}{s},raw_wd,sprintf('%s*%s_raw*',expts{e},runs{e}{r})));  % Get raw FIF file
-                    %raw_file = dir(fullfile(dat_wd,cbu_codes{g}{s},raw_wd,sprintf('%s%s_raw*',expts{e},runs{e}{r})));  % Get raw FIF file
-                    raw_file = dir(fullfile(dat_wd,cbu_codes{g}{s},raw_wd,sprintf('%s%s*',expts{e},runs{e}{r})));  % Get raw FIF file
+                    % raw_file = dir(fullfile(dat_wd,cbu_codes{g}{s},raw_wd,sprintf('%s%s_raw*',expts{e},runs{e}{r})));  % Get raw FIF file
+                    raw_file = dir(fullfile(dat_wd,cbu_codes{g}{s},raw_wd,sprintf('%s%s.fif',expts{e},runs{e}{r})));  % Get raw FIF file
                     
 
                     if isempty(raw_file)
