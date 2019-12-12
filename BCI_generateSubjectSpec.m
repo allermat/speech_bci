@@ -10,7 +10,7 @@ update = p.Results.update;
 
 s = subjSpec();
 %%
-subID = 'meg19_0378';
+subID = 'meg19_0428';
 if ~s.subjPresent(subID) || update
     % Subject ID
     if ~update, s.addSubj(subID); end
@@ -20,7 +20,8 @@ if ~s.subjPresent(subID) || update
         'run2'
         'run3'
         'run4'
-        'run5'};
+        'run5'
+        'run6'};
     % The number of sessions started in the files
     nRunsInFile = ones(size(fileName));
     % The serial number within the files of the runn(s) to be excluded
@@ -37,32 +38,7 @@ if ~s.subjPresent(subID) || update
 end
 
 %%
-subID = 'meg19_0379';
-if ~s.subjPresent(subID) || update
-    % Subject ID
-    if ~update, s.addSubj(subID); end
-    % MEG files to be included
-    fileName = {...
-        'run1'
-        'run2'
-        'run3'};
-    % The number of sessions started in the files
-    nRunsInFile = ones(size(fileName));
-    % The serial number within the files of the runn(s) to be excluded
-    exclude = num2cell(NaN(size(fileName)));
-    % The overall running index of not excluded runs within the files
-    % accounting for the behavioural only first day as well. 
-    iRunOverall = num2cell(1:numel(fileName))';
-    s.addField(subID,'meg_files',table(fileName,nRunsInFile,exclude,iRunOverall));
-    % Pre-processing parameters that can change individually
-    s.addField(subID,'preproc_param',...
-        orderfields(struct('cutoff_zval',10,'hp_freq',0.1)));
-    % Notes
-    s.addField(subID,'notes',sprintf(''));
-end
-
-%%
-subID = 'meg19_0382';
+subID = 'meg19_0432';
 if ~s.subjPresent(subID) || update
     % Subject ID
     if ~update, s.addSubj(subID); end
@@ -84,13 +60,13 @@ if ~s.subjPresent(subID) || update
     s.addField(subID,'meg_files',table(fileName,nRunsInFile,exclude,iRunOverall));
     % Pre-processing parameters that can change individually
     s.addField(subID,'preproc_param',...
-        orderfields(struct('cutoff_zval',10,'hp_freq',0.1)));
+        orderfields(struct('cutoff_zval',15,'hp_freq',0.1)));
     % Notes
     s.addField(subID,'notes',sprintf(''));
 end
 
 %%
-subID = 'meg19_0397';
+subID = 'meg19_0436';
 if ~s.subjPresent(subID) || update
     % Subject ID
     if ~update, s.addSubj(subID); end
@@ -112,7 +88,35 @@ if ~s.subjPresent(subID) || update
     s.addField(subID,'meg_files',table(fileName,nRunsInFile,exclude,iRunOverall));
     % Pre-processing parameters that can change individually
     s.addField(subID,'preproc_param',...
-        orderfields(struct('cutoff_zval',10,'hp_freq',0.1)));
+        orderfields(struct('cutoff_zval',15,'hp_freq',0.1)));
+    % Notes
+    s.addField(subID,'notes',sprintf(''));
+end
+
+%%
+subID = 'meg19_0439';
+if ~s.subjPresent(subID) || update
+    % Subject ID
+    if ~update, s.addSubj(subID); end
+    % MEG files to be included
+    fileName = {...
+        'run1'
+        'run2'
+        'run3'
+        'run4'
+        'run5'
+        'run6'};
+    % The number of sessions started in the files
+    nRunsInFile = ones(size(fileName));
+    % The serial number within the files of the runn(s) to be excluded
+    exclude = num2cell(NaN(size(fileName)));
+    % The overall running index of not excluded runs within the files
+    % accounting for the behavioural only first day as well. 
+    iRunOverall = num2cell(1:numel(fileName))';
+    s.addField(subID,'meg_files',table(fileName,nRunsInFile,exclude,iRunOverall));
+    % Pre-processing parameters that can change individually
+    s.addField(subID,'preproc_param',...
+        orderfields(struct('cutoff_zval',15,'hp_freq',0.1)));
     % Notes
     s.addField(subID,'notes',sprintf(''));
 end
